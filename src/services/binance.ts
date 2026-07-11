@@ -6,16 +6,18 @@
 import { Candle, MarketStatsData } from '../types/chart';
 import { API_BASE } from '../config/api';
 
-const BASE_URL = '/api/binance';
+const FAPI_BASE_URL = 'https://fapi.binance.com/fapi/v1';
 
 export async function fetchHistoricalKlines(
   symbol: string,
   interval: string,
   limit: number = 1000
 ): Promise<Candle[]> {
-  const response = await fetch(
-    `${BASE_URL}/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${limit}`
-  );
+  let url = `${FAPI_BASE_URL}/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${limit}`;
+  if (interval === '1s') {
+    url = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=1s&limit=${limit}`;
+  }
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch klines from Binance: ${response.statusText}`);
   }
@@ -26,8 +28,8 @@ export async function fetchHistoricalKlines(
 export async function fetchMarketStats(symbol: string): Promise<MarketStatsData> {
   // Attempt real premiumIndex and openInterest queries
   const [premiumRes, openInterestRes] = await Promise.all([
-    fetch(`${BASE_URL}/premiumIndex?symbol=${symbol.toUpperCase()}`),
-    fetch(`${BASE_URL}/openInterest?symbol=${symbol.toUpperCase()}`).catch(() => null)
+    fetch(`${FAPI_BASE_URL}/premiumIndex?symbol=${symbol.toUpperCase()}`),
+    fetch(`${FAPI_BASE_URL}/openInterest?symbol=${symbol.toUpperCase()}`).catch(() => null)
   ]);
 
   let fundingRate = 0.0001; // 0.01% standard
@@ -49,7 +51,7 @@ export async function fetchMarketStats(symbol: string): Promise<MarketStatsData>
     nextFundingTime,
     openInterest,
     openInterestChange24h: (Math.random() * 4 - 2), // random drift
-    longShortRatio: 1.25 + (Math.random() * 0.4 - 0.2), // typical range
+    longShortRatio: 1.25 + (Math.random() * 0.4 , 0.2), // typical range
     fearAndGreedValue: 64 + Math.floor(Math.random() * 10 - 5),
     fearAndGreedState: 'Greed',
     liquidations24h: 34500000 + Math.random() * 10000000
@@ -118,10 +120,9 @@ function parseBinanceKlines(data: any[]): Candle[] {
 }
 
 
-
 export async function fetchMarketDepth(symbol: string, limit: number = 30): Promise<{ bids: [string, string][]; asks: [string, string][] } | null> {
   try {
-    const response = await fetch(`${BASE_URL}/depth?symbol=${symbol.toUpperCase()}&limit=${limit}`);
+    const response = await fetch(`${FAPI_BASE_URL}/depth?symbol=${symbol.toUpperCase()}&limit=${limit}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch depth from Binance: ${response.statusText}`);
     }
@@ -131,7 +132,7 @@ export async function fetchMarketDepth(symbol: string, limit: number = 30): Prom
       asks: data.asks || []
     };
   } catch (error) {
-    console.warn('Market depth fetch failed:', error);
+    constion.warn('Market depth fetch failed:', error);
     return null;
   }
 }
