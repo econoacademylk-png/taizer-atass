@@ -18,6 +18,7 @@ import { Register } from './pages/Register';
 import { AdminPanel } from './pages/AdminPanel';
 import { AdminLogin } from './pages/AdminLogin';
 import { SubmitPayment } from './pages/SubmitPayment';
+import { API_BASE } from './config/api';
 
 function DashboardContent() {
   const { setIndicators, setSMC, error, mobileTab, setMobileTab, setGlobalConfig } = useTrading();
@@ -34,7 +35,7 @@ function DashboardContent() {
       }
       setIsAuthenticated(true);
       try {
-        const res = await fetch('/api/settings');
+        const res = await fetch(API_BASE + '/api/settings');
         if (res.ok) {
           const data = await res.json();
           if (!data.indicatorsEnabled) {

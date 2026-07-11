@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, UserPlus, Mail, KeyRound, X } from 'lucide-react';
+import { API_BASE } from '../config/api';
 
 // ==========================================
 // EMAILJS CONFIGURATION
@@ -68,7 +69,7 @@ export function Register() {
 
     try {
       // First check if user or email already exists in the database
-      const checkRes = await fetch('/api/auth/check-user', {
+      const checkRes = await fetch(API_BASE + '/api/auth/check-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, username: formData.email })
@@ -133,7 +134,7 @@ export function Register() {
 
     try {
       // OTP matched, proceed with actual registration
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(API_BASE + '/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, username: formData.email })

@@ -1,3 +1,4 @@
+import { API_BASE } from '../config/api';
 export interface FAData {
   price: number;
   marketCap: number;
@@ -91,8 +92,8 @@ export async function fetchFAData(symbol: string): Promise<FAData> {
   let fundingRate = 0;
   try {
     const [oiRes, frRes] = await Promise.all([
-      fetch(`/api/binance/openInterest?symbol=${normSymbol}`),
-      fetch(`/api/binance/premiumIndex?symbol=${normSymbol}`)
+      fetch(API_BASE + `/api/binance/openInterest?symbol=${normSymbol}`),
+      fetch(API_BASE + `/api/binance/premiumIndex?symbol=${normSymbol}`)
     ]);
     if (oiRes.ok) {
       const oiData = await oiRes.json();

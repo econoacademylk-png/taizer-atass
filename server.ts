@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
@@ -55,6 +56,7 @@ connectDB();
 
 async function startServer() {
   const app = express();
+  app.use(cors());
   const PORT = 3000;
 
   if (!process.env.GEMINI_API_KEY) {

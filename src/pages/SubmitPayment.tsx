@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { CreditCard, CheckCircle, ArrowRight, Clock } from 'lucide-react';
+import { API_BASE } from '../config/api';
 
 export function SubmitPayment() {
   const [searchParams] = useSearchParams();
@@ -21,13 +22,13 @@ export function SubmitPayment() {
   const [isAwaitingApproval, setIsAwaitingApproval] = useState(isPending);
 
   React.useEffect(() => {
-    fetch('/api/settings')
+    fetch(API_BASE + '/api/settings')
       .then(res => res.json())
       .then(data => setSettings(data))
       .catch(console.error);
       
     if (username) {
-      fetch(`/api/auth/user-status/${encodeURIComponent(username)}`)
+      fetch(API_BASE + `/api/auth/user-status/${encodeURIComponent(username)}`)
         .then(res => res.json())
         .then(data => {
           if (data.hasUsedFreeTrial) {
@@ -46,7 +47,7 @@ export function SubmitPayment() {
     let interval: ReturnType<typeof setInterval>;
     if (username && (isAwaitingApproval || isPending) && !isApproved) {
       interval = setInterval(() => {
-        fetch(`/api/auth/user-status/${encodeURIComponent(username)}`)
+        fetch(API_BASE + `/api/auth/user-status/${encodeURIComponent(username)}`)
           .then(res => res.json())
           .then(data => {
             if (data.approved) {
@@ -82,7 +83,7 @@ export function SubmitPayment() {
         formData.append('receipt', receiptFile);
       }
 
-      const res = await fetch('/api/auth/submit-payment', {
+      const res = await fetch(API_BASE + '/api/auth/submit-payment', {
         method: 'POST',
         body: formData
       });

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Power, CheckCircle, Clock, Users, Settings, LayoutDashboard, LogOut, ArrowLeft, ShieldAlert, CreditCard, XCircle, User as UserIcon, Activity } from 'lucide-react';
+import { API_BASE } from '../config/api';
 
 type Tab = 'dashboard' | 'users' | 'settings' | 'profile';
 
@@ -94,7 +95,7 @@ export function AdminPanel() {
 
   const fetchOnlineUsers = async () => {
     try {
-      const res = await fetch('/api/admin/onlineUsers', {
+      const res = await fetch(API_BASE + '/api/admin/onlineUsers', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -106,7 +107,7 @@ export function AdminPanel() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch('/api/admin/profile', {
+      const res = await fetch(API_BASE + '/api/admin/profile', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -118,7 +119,7 @@ export function AdminPanel() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(API_BASE + '/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -133,7 +134,7 @@ export function AdminPanel() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/settings');
+      const res = await fetch(API_BASE + '/api/settings');
       if (res.ok) {
         const data = await res.json();
         setGlobalSettings(data);
@@ -154,7 +155,7 @@ export function AdminPanel() {
     const expiryDateStr = d.toISOString();
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}/approve`, {
+      const res = await fetch(API_BASE + `/api/admin/users/${userId}/approve`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -174,7 +175,7 @@ export function AdminPanel() {
     if (!window.confirm("Are you sure you want to reject and delete this user?")) return;
     
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await fetch(API_BASE + `/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -187,7 +188,7 @@ export function AdminPanel() {
 
   const saveSettings = async (newSettings: any) => {
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await fetch(API_BASE + '/api/admin/settings', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -204,7 +205,7 @@ export function AdminPanel() {
   const toggleMasterSwitch = async () => {
     try {
       const newSettings = { ...globalSettings, indicatorsEnabled: !globalSettings.indicatorsEnabled };
-      const res = await fetch('/api/admin/settings', {
+      const res = await fetch(API_BASE + '/api/admin/settings', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -228,7 +229,7 @@ export function AdminPanel() {
         [key]: !currentVal
       };
 
-      const res = await fetch('/api/admin/settings', {
+      const res = await fetch(API_BASE + '/api/admin/settings', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -254,7 +255,7 @@ export function AdminPanel() {
     e.preventDefault();
     setProfileStatus({ loading: true, error: '', success: '' });
     try {
-      const res = await fetch('/api/admin/profile', {
+      const res = await fetch(API_BASE + '/api/admin/profile', {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

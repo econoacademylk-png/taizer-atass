@@ -13,6 +13,7 @@ import { calculateRSI, calculateMACD } from "../utils/indicators";
 import { calculateLEZ } from "../utils/lezCalculator";
 import { OBScanBox } from "./OBScanBox";
 import { PaceGauge } from "./PaceGauge";
+import { API_BASE } from '../config/api';
 
 const formatStatValue = (val: number): string => {
   const absVal = Math.abs(val);
@@ -139,7 +140,7 @@ export const ChartContainer: React.FC = () => {
   useEffect(() => {
     if (indicators.showNews) {
       // Fetch from local proxy to avoid CORS and rate limits
-      fetch("/api/news")
+      fetch(API_BASE + "/api/news")
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
@@ -154,7 +155,7 @@ export const ChartContainer: React.FC = () => {
   useEffect(() => {
     const sessionId = Math.random().toString(36).substring(2, 15);
     const sendHeartbeat = () => {
-      fetch("/api/heartbeat", {
+      fetch(API_BASE + "/api/heartbeat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: sessionId })

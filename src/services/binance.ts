@@ -4,6 +4,7 @@
  */
 
 import { Candle, MarketStatsData } from '../types/chart';
+import { API_BASE } from '../config/api';
 
 const BASE_URL = '/api/binance';
 
