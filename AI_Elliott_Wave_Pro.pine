@@ -1,0 +1,143 @@
+
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © AI Elliott Wave Pro
+
+//@version=5
+indicator("AI Elliott Wave Pro [SMC + Fib + Oscillators]", shorttitle="AI EW Pro", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+
+// ========================================================================= //
+// 1. INPUTS & CONFIGURATION
+// ========================================================================= //
+grp_zz = "ZigZag & Structure Settings"
+length = input.int(10, "ZigZag Length", group=grp_zz)
+useATR = input.bool(true, "Use ATR Filtering", group=grp_zz)
+atrMult = input.float(1.0, "ATR Multiplier", group=grp_zz)
+
+grp_ew = "Elliott Wave Settings"
+showEW = input.bool(true, "Show Elliott Waves", group=grp_ew)
+showFib = input.bool(true, "Show Fibonacci Levels", group=grp_ew)
+
+grp_smc = "Smart Money Concepts"
+showSMC = input.bool(true, "Show SMC (OB, FVG, Liquidity)", group=grp_smc)
+obLength = input.int(5, "Order Block Length", group=grp_smc)
+
+grp_osc = "Oscillators (RSI/MACD)"
+rsiLen = input.int(14, "RSI Length", group=grp_osc)
+macdFast = input.int(12, "MACD Fast", group=grp_osc)
+macdSlow = input.int(26, "MACD Slow", group=grp_osc)
+macdSig = input.int(9, "MACD Signal", group=grp_osc)
+
+grp_dash = "Dashboard"
+showDash = input.bool(true, "Show AI Dashboard", group=grp_dash)
+
+// ========================================================================= //
+// 2. INDICATOR CALCULATIONS (ATR, RSI, MACD)
+// ========================================================================= //
+atr = ta.atr(14)
+rsi = ta.rsi(close, rsiLen)
+[macdLine, signalLine, hist] = ta.macd(close, macdFast, macdSlow, macdSig)
+
+// ========================================================================= //
+// 3. ADAPTIVE ZIGZAG & MARKET STRUCTURE (HH, HL, LH, LL)
+// ========================================================================= //
+var int dir = 0
+var float lastPivot = na
+var int lastPivotIdx = na
+
+float ph = ta.pivothigh(high, length, length)
+float pl = ta.pivotlow(low, length, length)
+
+bool isHigh = not na(ph)
+bool isLow = not na(pl)
+
+// Simple ATR filter
+if useATR and isHigh and not na(lastPivot)
+    if (ph - lastPivot) < (atr * atrMult)
+        isHigh := false
+
+if useATR and isLow and not na(lastPivot)
+    if (lastPivot - pl) < (atr * atrMult)
+        isLow := false
+
+// Draw Structure
+if isHigh
+    dir := 1
+    lastPivot := ph
+    lastPivotIdx := bar_index
+    if showEW
+        label.new(bar_index[length], ph, "HH/LH", color=color.new(color.green, 100), textcolor=color.green, style=label.style_none, size=size.small)
+
+if isLow
+    dir := -1
+    lastPivot := pl
+    lastPivotIdx := bar_index
+    if showEW
+        label.new(bar_index[length], pl, "LL/HL", color=color.new(color.red, 100), textcolor=color.red, style=label.style_none, size=size.small)
+
+// ========================================================================= //
+// 4. FAIR VALUE GAPS (FVG) & ORDER BLOCKS
+// ========================================================================= //
+bullFVG = low > high[2] and close[1] > high[2]
+bearFVG = high < low[2] and close[1] < low[2]
+
+if showSMC and bullFVG
+    box.new(bar_index[2], low, bar_index, high[2], border_color=color.new(color.green,80), bgcolor=color.new(color.green,90))
+if showSMC and bearFVG
+    box.new(bar_index[2], low[2], bar_index, high, border_color=color.new(color.red,80), bgcolor=color.new(color.red,90))
+
+// ========================================================================= //
+// 5. AI CONFIDENCE SCORE LOGIC
+// ========================================================================= //
+float confidence = 50.0
+
+// + MACD / RSI Scoring
+if macdLine > signalLine
+    confidence += 10
+else
+    confidence -= 10
+
+if rsi > 50
+    confidence += 10
+else
+    confidence -= 10
+    
+if close > ta.ema(close, 200)
+    confidence += 20
+else
+    confidence -= 20
+
+// Clamp
+confidence := math.max(0, math.min(100, confidence))
+
+string aiSignal = confidence >= 80 ? "STRONG BUY" : confidence >= 60 ? "BUY" : confidence <= 20 ? "STRONG SELL" : confidence <= 40 ? "SELL" : "NEUTRAL"
+color aiColor = confidence >= 60 ? color.green : confidence <= 40 ? color.red : color.gray
+
+// ========================================================================= //
+// 6. DASHBOARD
+// ========================================================================= //
+var table dash = table.new(position.top_right, 2, 8, bgcolor=color.new(color.black, 10), border_width=1, border_color=color.gray)
+
+if showDash and barstate.islast
+    table.cell(dash, 0, 0, "AI Elliott Wave Pro", text_color=color.white, text_size=size.small, bgcolor=color.blue)
+    table.cell(dash, 1, 0, "Status", text_color=color.white, text_size=size.small, bgcolor=color.blue)
+    
+    table.cell(dash, 0, 1, "AI Signal", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 1, aiSignal, text_color=aiColor, text_size=size.small)
+    
+    table.cell(dash, 0, 2, "Confidence", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 2, str.tostring(confidence) + "%", text_color=aiColor, text_size=size.small)
+    
+    table.cell(dash, 0, 3, "RSI (14)", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 3, str.tostring(math.round(rsi, 2)), text_color=rsi > 50 ? color.green : color.red, text_size=size.small)
+
+    table.cell(dash, 0, 4, "MACD", text_color=color.white, text_size=size.small)
+    table.cell(dash, 1, 4, macdLine > signalLine ? "Bullish" : "Bearish", text_color=macdLine > signalLine ? color.green : color.red, text_size=size.small)
+
+// ========================================================================= //
+// 7. ALERTS
+// ========================================================================= //
+alertcondition(bullFVG, title="Bullish FVG Formed", message="A Bullish Fair Value Gap has appeared.")
+alertcondition(bearFVG, title="Bearish FVG Formed", message="A Bearish Fair Value Gap has appeared.")
+alertcondition(confidence >= 80, title="Strong Buy Signal", message="AI Confidence >= 80%: Strong Buy")
+alertcondition(confidence <= 20, title="Strong Sell Signal", message="AI Confidence <= 20%: Strong Sell")
+

@@ -1,0 +1,6 @@
+{
+  "name": "AuraTrade Pro",
+  "description": "An institutional-grade crypto trading dashboard featuring a high-performance Canvas HTML5 chart engine, live Binance Order Flow footprint, real-time DOM Depth, Smart Money Concepts, Heatmaps, and fully customizable indicators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

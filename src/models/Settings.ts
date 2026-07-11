@@ -1,0 +1,72 @@
+import mongoose from 'mongoose';
+
+const settingsSchema = new mongoose.Schema({
+  settingsId: { type: String, default: 'global', unique: true },
+  indicatorsEnabled: { type: Boolean, default: true }, // Master Switch
+  usdtTrc20Address: { type: String, default: '' },
+  usdtBep20Address: { type: String, default: '' },
+  bankDetails: { type: String, default: '' },
+  monthlyPrice: { type: Number, default: 50 },
+  lifetimePrice: { type: Number, default: 500 },
+  individualIndicators: {
+    type: Map,
+    of: Boolean,
+    default: {
+      showEMA: false,
+      showLEZ: false,
+      showSMA: false,
+      showVWAP: false,
+      showMPAS: false,
+      showVolumeProfile: true,
+      showTPO: false,
+      showNPOC: false,
+      showDeltaCVD: false,
+      showSpoof: false,
+      showOI: false,
+      showOIT: false,
+      showOIWall: false,
+      showLVN: false,
+      showFPShape: false,
+      showStats: false,
+      showDOMLiquidity: true,
+      showWickDelta: false,
+      showDelta: false,
+      showDDelta: false,
+      showDeltaV: false,
+      showIMB: false,
+      showWhales: true,
+      showRSI: false,
+      showVPT: false,
+      showHeatmap: true,
+      showSTK: false,
+      showLiveDOMProfile: true,
+      showMTF: false,
+      showPivot: false,
+      showAbs: false,
+      showDVol: false,
+      showDOpen: true,
+      showSess: false,
+      showCRT: false,
+      showEW: false,
+      showSK: false,
+      showTWB: false,
+      showSNR: false,
+      showWYC: false,
+      showVWBA: false,
+      showMMS: false,
+      showNews: true,
+      showFVG: true,
+      showBOS: true,
+      showCHOCH: true,
+      showOB: true,
+      showMitigation: false,
+      showLiquiditySweeps: true,
+      showPremiumDiscount: false,
+      showHVBuy: true,
+      showHVSell: true
+    }
+  }
+}, { timestamps: true });
+
+export const Settings = mongoose.model('Settings', settingsSchema);
+
