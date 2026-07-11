@@ -14,23 +14,15 @@ dotenv.config({ path: '.env.local' });
 dotenv.config(); // fallback to .env if .env.local doesn't exist
 
 // Setup multer storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = './uploads';
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
 // Database Connection
+let isConnected = false;
 async function connectDB() {
+  if (isConnected) return;
   const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taizer-atass';
   try {
     await mongoose.connect(MONGO_URI, { dbName: 'taizer-atass' });
@@ -47,26 +39,27 @@ async function connectDB() {
       });
       console.log('Seeded default admin account');
     }
+    isConnected = true;
   } catch (err) {
     console.error('MongoDB connection error:', err);
   }
 }
 
-connectDB();
+export const app = express();
+app.use(cors());
+app.use(express.json());
 
-async function startServer() {
-  const app = express();
-  app.use(cors());
-  const PORT = 3000;
+app.use('/api', async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
   if (!process.env.GEMINI_API_KEY) {
     console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
   }
 
-  // Serve uploads statically
-  app.use('/uploads', express.static('uploads'));
-
-  app.use(express.json());
+  // Serve uploads (bypassed for serverless)
+  // app.use('/uploads', express.static('uploads'));
 
   // --- NEWS API PROXY ---
   let cachedNews: any = null;
@@ -456,24 +449,7 @@ async function startServer() {
     }
   });
 
-  // 2. Vite middleware or static serving
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
+  
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
-}
 
-startServer();
+
