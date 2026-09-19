@@ -34,3 +34,12 @@
   scrollbar-width: none;
 }
 
+/* Hide Netlify floating badge container */
+iframe[src*="netlify"],
+iframe[id*="netlify"],
+[class*="netlify-badge"],
+[id*="netlify-badge"] {
+  display: none !important;
+}
+
+
