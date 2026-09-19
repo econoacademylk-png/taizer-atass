@@ -33,7 +33,7 @@ export const LEZSignalsModal: React.FC<LEZSignalsModalProps> = ({ isOpen, onClos
     triggerScan 
   } = useLEZStore();
   
-  const { setActiveSymbol, setIndicators, activeSymbol } = useTrading();
+  const { setActiveSymbol, setActiveTimeframe, setIndicators, activeSymbol } = useTrading();
   const [filter, setFilter] = useState<'all' | 'fresh' | 'buy' | 'sell'>('all');
   const [, setNowTick] = useState(Date.now());
 
@@ -47,8 +47,7 @@ export const LEZSignalsModal: React.FC<LEZSignalsModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const filteredSignals = signals.filter((s) => {
-    const ageMs = Date.now() - s.time;
-    if (filter === 'fresh') return ageMs <= 2 * 60 * 1000;
+    if (filter === 'fresh') return s.isFresh;
     if (filter === 'buy') return s.type === 'buy';
     if (filter === 'sell') return s.type === 'sell';
     return true;
@@ -63,8 +62,11 @@ export const LEZSignalsModal: React.FC<LEZSignalsModalProps> = ({ isOpen, onClos
     return `${diffHours}h ${diffMin % 60}m ago`;
   };
 
-  const handleSelectCoin = (symbol: string) => {
+  const handleSelectCoin = (symbol: string, tf?: string) => {
     setActiveSymbol(symbol);
+    if (tf) {
+      setActiveTimeframe(tf);
+    }
     setIndicators(prev => ({ ...prev, showLEZ: true }));
     onClose();
   };
@@ -144,9 +146,9 @@ export const LEZSignalsModal: React.FC<LEZSignalsModalProps> = ({ isOpen, onClos
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-slate-500 text-[10px] uppercase">Timeframe:</span>
-              {['1m', '5m', '15m'].map((tf) => (
+              {['1m', '5m', '15m', '1h', '4h', '1d'].map((tf) => (
                 <button
                   key={tf}
                   onClick={() => setScanTimeframe(tf)}
@@ -219,13 +221,14 @@ export const LEZSignalsModal: React.FC<LEZSignalsModalProps> = ({ isOpen, onClos
             filteredSignals.map((signal) => {
               const isBuy = signal.type === 'buy';
               const ageMs = Date.now() - signal.time;
-              const isFresh = ageMs <= 2 * 60 * 1000;
+              const isFresh = signal.isFresh;
+              const isUltraFresh = ageMs <= 2 * 60 * 1000;
               const isCurrent = activeSymbol === signal.symbol;
 
               return (
                 <div
                   key={signal.id}
-                  onClick={() => handleSelectCoin(signal.symbol)}
+                  onClick={() => handleSelectCoin(signal.symbol, signal.timeframe)}
                   className={`group relative rounded-xl border p-3.5 transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     isFresh
                       ? isBuy
@@ -258,12 +261,17 @@ export const LEZSignalsModal: React.FC<LEZSignalsModalProps> = ({ isOpen, onClos
                           Q:{signal.qualityScore}
                         </span>
 
-                        {isFresh && (
+                        {isUltraFresh ? (
                           <span className="flex items-center gap-1 text-[9px] font-black font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/50 animate-pulse">
                             <Flame className="w-3 h-3 fill-amber-400" />
                             &lt; 2M
                           </span>
-                        )}
+                        ) : isFresh ? (
+                          <span className="flex items-center gap-1 text-[9px] font-black font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 animate-pulse">
+                            <Flame className="w-3 h-3 fill-emerald-400" />
+                            FRESH
+                          </span>
+                        ) : null}
                       </div>
 
                       <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 mt-1">
@@ -301,7 +309,7 @@ export const LEZSignalsModal: React.FC<LEZSignalsModalProps> = ({ isOpen, onClos
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSelectCoin(signal.symbol);
+                        handleSelectCoin(signal.symbol, signal.timeframe);
                       }}
                       className={`w-full sm:w-auto px-3 py-2 rounded-lg font-mono font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
                         isBuy

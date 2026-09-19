@@ -11,6 +11,18 @@ const TOP_MONITORED_COINS = [
   "SEIUSDT", "ARBUSDT", "OPUSDT", "WIFUSDT", "ENAUSDT", "LTCUSDT", "BCHUSDT"
 ];
 
+export function getTimeframeDurationMs(tf: string): number {
+  switch (tf) {
+    case '1m': return 60 * 1000;
+    case '5m': return 5 * 60 * 1000;
+    case '15m': return 15 * 60 * 1000;
+    case '1h': return 60 * 60 * 1000;
+    case '4h': return 4 * 60 * 60 * 1000;
+    case '1d': return 24 * 60 * 60 * 1000;
+    default: return 5 * 60 * 1000;
+  }
+}
+
 // Global state for LEZ Scanner
 interface LEZStoreState {
   signals: LEZLiveSignal[];
@@ -93,14 +105,15 @@ export async function runLEZScan() {
 
             const signalTime = candle.time;
             const ageMs = now - signalTime;
+            const candleDuration = getTimeframeDurationMs(timeframe);
 
-            // Signal is fresh if within 2 minutes (120,000 ms)
-            // Or within 1 candle period for 1m / 5m
-            const isFresh = ageMs <= 2 * 60 * 1000;
-            const isRecent = ageMs <= 15 * 60 * 1000; // within 15 mins to display in hub
+            // Fresh if within 2 minutes for 1m/5m, or within 1 candle period for 15m/1h/4h/1d
+            const isFresh = ageMs <= Math.max(2 * 60 * 1000, candleDuration);
+            // Recent if within 4 candle periods (e.g. 4 hours for 1h, 16h for 4h, 4 days for 1d)
+            const isRecent = ageMs <= Math.max(30 * 60 * 1000, candleDuration * 4);
 
             if (isRecent) {
-              const signalId = `${symbol}-${lastSig.type}-${signalTime}`;
+              const signalId = `${symbol}-${timeframe}-${lastSig.type}-${signalTime}`;
               const liveSignal: LEZLiveSignal = {
                 id: signalId,
                 symbol,
@@ -117,7 +130,7 @@ export async function runLEZScan() {
 
               detectedSignals.push(liveSignal);
 
-              // If fresh (<= 2 min) and not alerted yet, trigger alert!
+              // If fresh and not alerted yet, trigger alert!
               if (isFresh && !alertedSignalIds.has(signalId)) {
                 alertedSignalIds.add(signalId);
                 setLEZState(() => ({ latestAlert: liveSignal }));
@@ -175,7 +188,10 @@ export function useLEZStore() {
     setLEZState(() => ({ latestAlert: null }));
   };
 
-  const freshSignals = state.signals.filter((s) => Date.now() - s.time <= 2 * 60 * 1000);
+  const freshSignals = state.signals.filter((s) => {
+    const dur = getTimeframeDurationMs(s.timeframe);
+    return Date.now() - s.time <= Math.max(2 * 60 * 1000, dur);
+  });
 
   return {
     signals: state.signals,

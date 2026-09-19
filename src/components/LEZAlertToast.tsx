@@ -5,7 +5,7 @@ import { X, TrendingUp, TrendingDown, ArrowRight, Zap } from 'lucide-react';
 
 export const LEZAlertToast: React.FC = () => {
   const { latestAlert, clearLatestAlert } = useLEZStore();
-  const { setActiveSymbol, setIndicators } = useTrading();
+  const { setActiveSymbol, setActiveTimeframe, setIndicators } = useTrading();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -27,6 +27,9 @@ export const LEZAlertToast: React.FC = () => {
 
   const handleGoToCoin = () => {
     setActiveSymbol(latestAlert.symbol);
+    if (latestAlert.timeframe) {
+      setActiveTimeframe(latestAlert.timeframe);
+    }
     // Ensure LEZ indicator is enabled so they can immediately see the signal on chart
     setIndicators(prev => ({ ...prev, showLEZ: true }));
     setVisible(false);
