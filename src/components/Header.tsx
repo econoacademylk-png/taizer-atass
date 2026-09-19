@@ -10,6 +10,7 @@ import { Search, ChevronDown, Check, X, Star, Trash2, Plus, Zap } from 'lucide-r
 import { FAEngineModal } from './FAEngineModal';
 import { useLEZStore } from '../stores/useLEZStore';
 import { LEZSignalsModal } from './LEZSignalsModal';
+import { SignalFormModal } from './SignalFormModal';
 
 const highlightMatch = (text: string, query: string) => {
   if (!query) return <span className="font-mono tracking-wider font-bold">{text}</span>;
@@ -158,6 +159,9 @@ export const Header: React.FC = () => {
   // --- LEZ SIGNALS HUB SYSTEM ---
   const { signals: lezSignals, freshCount: lezFreshCount } = useLEZStore();
   const [isSignalsModalOpen, setIsSignalsModalOpen] = useState(false);
+
+  // --- SIGNAL FORM SYSTEM ---
+  const [isSignalFormOpen, setIsSignalFormOpen] = useState(false);
 
   const addFavorite = (sym: string) => {
     const upper = sym.toUpperCase().trim();
@@ -1023,6 +1027,16 @@ export const Header: React.FC = () => {
           FOUND
         </button>
 
+        <button
+          id="header-btn-SIGNAL-FORM"
+          onClick={() => setIsSignalFormOpen(true)}
+          className="h-7 px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border border-yellow-500/70 text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20 shadow-[0_0_12px_rgba(234,179,8,0.2)] transition-all shrink-0 rounded whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+          title="Create WhatsApp Signal"
+        >
+          <Zap className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+          <span>SIGNAL FORM</span>
+        </button>
+
         {/* LEZ SIGNALS HUB BUTTON */}
         <button
           id="header-btn-SIGNALS"
@@ -1425,6 +1439,12 @@ export const Header: React.FC = () => {
       <LEZSignalsModal
         isOpen={isSignalsModalOpen}
         onClose={() => setIsSignalsModalOpen(false)}
+      />
+
+      <SignalFormModal
+        isOpen={isSignalFormOpen}
+        onClose={() => setIsSignalFormOpen(false)}
+        defaultCoin={activeSymbol}
       />
     </div>
   );
