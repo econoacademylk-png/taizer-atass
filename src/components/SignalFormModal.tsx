@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Share2, Eye, Edit2, Zap, Target, Crosshair } from 'lucide-react';
+import { X, Copy, Share2, Eye, Edit2, Zap, Target, Crosshair, Check } from 'lucide-react';
 
 interface SignalFormModalProps {
   isOpen: boolean;
