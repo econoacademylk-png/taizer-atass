@@ -153,12 +153,23 @@ export const ChartContainer: React.FC = () => {
 
   // --- HEARTBEAT FOR ONLINE USERS ---
   useEffect(() => {
-    const sessionId = Math.random().toString(36).substring(2, 15);
+    let username = 'Guest';
+    let realUserId = null;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        realUserId = u.id;
+        username = u.username;
+      }
+    } catch(e) {}
+
+    const sessionId = realUserId || Math.random().toString(36).substring(2, 15);
     const sendHeartbeat = () => {
       fetch(API_BASE + "/api/heartbeat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: sessionId })
+        body: JSON.stringify({ userId: sessionId, username })
       }).catch(console.error);
     };
     sendHeartbeat();

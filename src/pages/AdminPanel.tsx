@@ -54,6 +54,7 @@ export function AdminPanel() {
   const [profileStatus, setProfileStatus] = useState({ loading: false, error: '', success: '' });
   const [users, setUsers] = useState<any[]>([]);
   const [onlineUsersCount, setOnlineUsersCount] = useState<number>(0);  
+  const [onlineUsersList, setOnlineUsersList] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>({
     indicatorsEnabled: false,
     individualIndicators: {},
@@ -107,6 +108,7 @@ export function AdminPanel() {
       if (res.ok) {
         const data = await res.json();
         setOnlineUsersCount(data.activeCount || 0);
+        setOnlineUsersList(data.users || []);
       } else if (res.status === 401 || res.status === 403) {
         handleAuthError();
       }
@@ -466,6 +468,36 @@ export function AdminPanel() {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Live Online Users Section */}
+            <div className="mt-8 bg-white/5 border border-white/10 p-6 rounded-2xl backdrop-blur-xl">
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <Activity className="text-blue-400 w-5 h-5" />
+                Live Online Users
+              </h2>
+              {onlineUsersList.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {onlineUsersList.map(user => (
+                    <div key={user.id} className="flex items-center gap-3 bg-black/20 p-3 rounded-xl border border-blue-500/20">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/30">
+                        <UserIcon className="text-blue-400 w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-slate-200">
+                          {user.username}
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                          Online
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-slate-500 text-sm py-4">No users are currently online.</div>
+              )}
             </div>
           </div>
         )}

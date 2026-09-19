@@ -218,12 +218,12 @@ app.use('/api', async (req, res, next) => {
   };
 
   // --- ONLINE USERS TRACKING ---
-  const onlineUsers = new Map<string, number>();
+  const onlineUsers = new Map<string, { lastSeen: number, username: string }>();
   
   app.post("/api/heartbeat", (req, res) => {
-    const { userId } = req.body;
+    const { userId, username } = req.body;
     if (userId) {
-      onlineUsers.set(userId, Date.now());
+      onlineUsers.set(userId, { lastSeen: Date.now(), username: username || 'Guest' });
     }
     res.status(200).send("OK");
   });
@@ -232,14 +232,16 @@ app.use('/api', async (req, res, next) => {
     try {
       const now = Date.now();
       let activeCount = 0;
-      for (const [id, lastSeen] of onlineUsers.entries()) {
-        if (now - lastSeen < 15000) { // 15 seconds threshold
+      const usersList: any[] = [];
+      for (const [id, data] of onlineUsers.entries()) {
+        if (now - data.lastSeen < 15000) { // 15 seconds threshold
           activeCount++;
+          usersList.push({ id, username: data.username, lastSeen: data.lastSeen });
         } else {
           onlineUsers.delete(id); // cleanup
         }
       }
-      res.json({ activeCount });
+      res.json({ activeCount, users: usersList });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
