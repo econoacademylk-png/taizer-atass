@@ -7377,108 +7377,170 @@ useEffect(() => {
   domState,
 ]);
 
-// Zoom / Scroll Wheel Interactive Handler
-const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-  e.preventDefault();
-  const vs = viewStateRef.current;
-  if (activeCandles.length === 0) return;
+  // --- NATIVE NON-PASSIVE WHEEL & TRACKPAD PINCH-TO-ZOOM HANDLER ---
+  // Attaching with { passive: false } ensures e.preventDefault() works 100%,
+  // which stops modern browsers (Chrome/Edge) from zooming the entire page/tools!
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas) return;
 
-  const rect = canvasRef.current?.getBoundingClientRect();
-  if (!rect) return;
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+    const handleNativeWheel = (e: WheelEvent) => {
+      // 1. ALWAYS prevent browser page zoom and default container scrolling
+      e.preventDefault();
+      e.stopPropagation();
 
-  const lastCandle = activeCandles[activeCandles.length - 1];
-  let timeStep = 3600000;
-  if (activeTimeframe === "1m") timeStep = 60000;
-  if (activeTimeframe === "5m") timeStep = 300000;
-  if (activeTimeframe === "15m") timeStep = 900000;
-  if (activeTimeframe === "4h") timeStep = 14400000;
-  if (activeTimeframe === "1d") timeStep = 86400000;
+      const vs = viewStateRef.current;
+      if (activeCandles.length === 0) return;
 
-  const chartWidth = dimensions.width - 85;
-  const statsHeight = indicators.showStats ? 75 : 0;
-  const chartHeight = dimensions.height - 28 - statsHeight;
-  const isZoomIn = e.deltaY > 0;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
-  // --- ZOOM PRICE SCALE ONLY (Y-axis Zoom) IF OVER THE PRICE AXIS COLUMN ---
-  if (x > chartWidth) {
-    const currentPriceMin = vs.isManualPriceScale
-      ? vs.manualPriceMin
-      : vs.priceMin;
-    const currentPriceMax = vs.isManualPriceScale
-      ? vs.manualPriceMax
-      : vs.priceMax;
-    const priceRange = currentPriceMax - currentPriceMin || 1;
+      const lastCandle = activeCandles[activeCandles.length - 1];
+      let timeStep = 3600000;
+      if (activeTimeframe === "1m") timeStep = 60000;
+      if (activeTimeframe === "5m") timeStep = 300000;
+      if (activeTimeframe === "15m") timeStep = 900000;
+      if (activeTimeframe === "4h") timeStep = 14400000;
+      if (activeTimeframe === "1d") timeStep = 86400000;
 
-    const pctY = (chartHeight - y) / chartHeight;
-    const mousePriceBefore = currentPriceMin + pctY * priceRange;
+      const chartWidth = dimensions.width - 85;
+      const statsHeight = indicators.showStats ? 75 : 0;
+      const chartHeight = dimensions.height - 28 - statsHeight;
 
-    // Scrolling up (isZoomIn) zooms in vertically (compresses price range, stretches height)
-    // Scrolling down zooms out vertically (expands price range, shrinks height)
-    const zoomFactor = isZoomIn ? 0.85 : 1.15;
-    const newPriceRange = priceRange * zoomFactor;
+      // 2. TWO-FINGER HORIZONTAL TRACKPAD PANNING (when not pinching with ctrlKey)
+      if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2 && Math.abs(e.deltaX) > 1.5) {
+        vs.scrollOffset += e.deltaX * 1.5;
+        computeVisiblePriceBounds();
+        drawChart();
+        return;
+      }
 
-    vs.isManualPriceScale = true;
-    vs.manualPriceMin = mousePriceBefore - pctY * newPriceRange;
-    vs.manualPriceMax = vs.manualPriceMin + newPriceRange;
+      // 3. ZOOM DIRECTION
+      // deltaY < 0 is Zoom IN (scroll up / pinch out)
+      // deltaY > 0 is Zoom OUT (scroll down / pinch in)
+      const isZoomIn = e.deltaY < 0;
 
-    computeVisiblePriceBounds();
-    drawChart();
-    return;
-  }
+      // --- ZOOM PRICE SCALE ONLY (Y-axis Zoom) IF OVER THE PRICE AXIS COLUMN ---
+      if (x > chartWidth) {
+        const currentPriceMin = vs.isManualPriceScale
+          ? vs.manualPriceMin
+          : vs.priceMin;
+        const currentPriceMax = vs.isManualPriceScale
+          ? vs.manualPriceMax
+          : vs.priceMax;
+        const priceRange = currentPriceMax - currentPriceMin || 1;
 
-  // --- STANDARD CHART ZOOM (HORIZONTAL TIMELINE ZOOM) ---
-  // Get time and price under the mouse pointer before zoom
-  const latestBarXBefore = dimensions.width - 85 - vs.scrollOffset;
-  const indexDiffBefore = (x - latestBarXBefore) / (vs.barWidth + vs.spacing);
-  const mouseTimeBefore = lastCandle.time + indexDiffBefore * timeStep;
+        const pctY = (chartHeight - y) / chartHeight;
+        const mousePriceBefore = currentPriceMin + pctY * priceRange;
 
-  const currentPriceMin = vs.isManualPriceScale
-    ? vs.manualPriceMin
-    : vs.priceMin;
-  const currentPriceMax = vs.isManualPriceScale
-    ? vs.manualPriceMax
-    : vs.priceMax;
-  const priceRange = currentPriceMax - currentPriceMin || 1;
-  const pctY = (chartHeight - y) / chartHeight;
-  const mousePriceBefore = currentPriceMin + pctY * priceRange;
+        let zoomFactor = 1;
+        if (e.ctrlKey) {
+          const delta = Math.max(-30, Math.min(30, e.deltaY));
+          zoomFactor = Math.pow(1.008, delta);
+        } else {
+          zoomFactor = isZoomIn ? 0.88 : 1.14;
+        }
 
-  const zoomFactor = isZoomIn ? 1.15 : 0.85;
+        const newPriceRange = priceRange * zoomFactor;
 
-  // Zoom bar width
-  vs.barWidth = Math.max(0.12, Math.min(180, vs.barWidth * zoomFactor));
+        vs.isManualPriceScale = true;
+        vs.manualPriceMin = mousePriceBefore - pctY * newPriceRange;
+        vs.manualPriceMax = vs.manualPriceMin + newPriceRange;
 
-  // Smoothly scale spacing
-  if (vs.barWidth >= 65) {
-    vs.spacing = 15;
-  } else if (vs.barWidth >= 20) {
-    vs.spacing = 6;
-  } else if (vs.barWidth >= 8) {
-    vs.spacing = 3;
-  } else if (vs.barWidth >= 4) {
-    vs.spacing = 1.5;
-  } else if (vs.barWidth >= 1.5) {
-    vs.spacing = 0.8;
-  } else {
-    vs.spacing = Math.max(0.04, vs.barWidth * 0.3);
-  }
+        computeVisiblePriceBounds();
+        drawChart();
+        return;
+      }
 
-  // Keep the time under mouse at the same X coordinate on screen
-  const candlesDiff = (mouseTimeBefore - lastCandle.time) / timeStep;
-  vs.scrollOffset =
-    dimensions.width - 85 - x + candlesDiff * (vs.barWidth + vs.spacing);
+      // --- STANDARD CHART ZOOM (HORIZONTAL TIMELINE ZOOM) ---
+      // Time and price under mouse before zoom to keep cursor pinned
+      const latestBarXBefore = dimensions.width - 85 - vs.scrollOffset;
+      const indexDiffBefore = (x - latestBarXBefore) / (vs.barWidth + vs.spacing);
+      const mouseTimeBefore = lastCandle.time + indexDiffBefore * timeStep;
 
-  // Zoom price scale if we are in manual price scale mode
-  if (vs.isManualPriceScale) {
-    const newPriceRange = priceRange * (isZoomIn ? 0.85 : 1.15);
-    vs.manualPriceMin = mousePriceBefore - pctY * newPriceRange;
-    vs.manualPriceMax = vs.manualPriceMin + newPriceRange;
-  }
+      const currentPriceMin = vs.isManualPriceScale
+        ? vs.manualPriceMin
+        : vs.priceMin;
+      const currentPriceMax = vs.isManualPriceScale
+        ? vs.manualPriceMax
+        : vs.priceMax;
+      const priceRange = currentPriceMax - currentPriceMin || 1;
+      const pctY = (chartHeight - y) / chartHeight;
+      const mousePriceBefore = currentPriceMin + pctY * priceRange;
 
-  computeVisiblePriceBounds();
-  drawChart();
-};
+      let zoomFactor: number;
+      if (e.ctrlKey) {
+        // Smooth proportional zoom for trackpad pinch
+        const delta = Math.max(-35, Math.min(35, e.deltaY));
+        zoomFactor = Math.pow(0.982, delta);
+      } else {
+        // Discrete zoom for mouse wheel
+        zoomFactor = isZoomIn ? 1.15 : 0.85;
+      }
+
+      // Zoom bar width with sensible boundaries
+      vs.barWidth = Math.max(0.12, Math.min(180, vs.barWidth * zoomFactor));
+
+      // Smoothly scale spacing
+      if (vs.barWidth >= 65) {
+        vs.spacing = 15;
+      } else if (vs.barWidth >= 20) {
+        vs.spacing = 6;
+      } else if (vs.barWidth >= 8) {
+        vs.spacing = 3;
+      } else if (vs.barWidth >= 4) {
+        vs.spacing = 1.5;
+      } else if (vs.barWidth >= 1.5) {
+        vs.spacing = 0.8;
+      } else {
+        vs.spacing = Math.max(0.04, vs.barWidth * 0.3);
+      }
+
+      // Keep the time under mouse at the exact same X coordinate on screen
+      const candlesDiff = (mouseTimeBefore - lastCandle.time) / timeStep;
+      vs.scrollOffset =
+        dimensions.width - 85 - x + candlesDiff * (vs.barWidth + vs.spacing);
+
+      // Zoom price scale if we are in manual price scale mode
+      if (vs.isManualPriceScale) {
+        const priceZoom = isZoomIn ? 0.90 : 1.10;
+        const newPriceRange = priceRange * priceZoom;
+        vs.manualPriceMin = mousePriceBefore - pctY * newPriceRange;
+        vs.manualPriceMax = vs.manualPriceMin + newPriceRange;
+      }
+
+      computeVisiblePriceBounds();
+      drawChart();
+    };
+
+    // Prevent browser zoom if gesture happens over container area
+    const preventContainerZoom = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    };
+
+    canvas.addEventListener("wheel", handleNativeWheel, { passive: false });
+    if (container) {
+      container.addEventListener("wheel", preventContainerZoom, { passive: false });
+    }
+
+    return () => {
+      canvas.removeEventListener("wheel", handleNativeWheel);
+      if (container) {
+        container.removeEventListener("wheel", preventContainerZoom);
+      }
+    };
+  }, [
+    activeCandles,
+    activeTimeframe,
+    dimensions,
+    indicators.showStats,
+    computeVisiblePriceBounds,
+    drawChart,
+  ]);
 
 // Mouse interactivity triggers (Pan, Drag Scale, Draw)
 
@@ -8122,7 +8184,6 @@ const yToPrice = (y: number): number => {
     >
       <canvas
         ref={canvasRef}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

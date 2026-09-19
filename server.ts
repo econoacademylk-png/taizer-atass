@@ -184,12 +184,38 @@ app.use('/api', async (req, res, next) => {
         }
       }
       
-      const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+      const token = jwt.sign(
+        { id: user._id, role: user.role }, 
+        JWT_SECRET, 
+        { expiresIn: user.role === 'admin' ? '30d' : '7d' }
+      );
       res.json({ token, user: { id: user._id, username: user.username, role: user.role } });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // --- ADMIN AUTH MIDDLEWARE ---
+  const authenticateAdmin = (req: any, res: any, next: any) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Unauthorized: No token provided" });
+    }
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded: any = jwt.verify(token, JWT_SECRET);
+      if (decoded.role !== "admin") {
+        return res.status(403).json({ error: "Forbidden: Admin access required" });
+      }
+      req.admin = decoded;
+      next();
+    } catch (err: any) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(401).json({ error: "Session expired. Please log in again." });
+      }
+      return res.status(401).json({ error: "Invalid token. Please log in again." });
+    }
+  };
 
   // --- ONLINE USERS TRACKING ---
   const onlineUsers = new Map<string, number>();
@@ -202,13 +228,8 @@ app.use('/api', async (req, res, next) => {
     res.status(200).send("OK");
   });
 
-  app.get("/api/admin/onlineUsers", (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  app.get("/api/admin/onlineUsers", authenticateAdmin, (req, res) => {
     try {
-      const decoded: any = jwt.verify(authHeader.split(" ")[1], JWT_SECRET);
-      if (decoded.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-      
       const now = Date.now();
       let activeCount = 0;
       for (const [id, lastSeen] of onlineUsers.entries()) {
@@ -219,32 +240,23 @@ app.use('/api', async (req, res, next) => {
         }
       }
       res.json({ activeCount });
-    } catch (err) {
-      res.status(401).json({ error: "Invalid token" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/admin/users", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  app.get("/api/admin/users", authenticateAdmin, async (req, res) => {
     try {
-      const decoded: any = jwt.verify(authHeader.split(" ")[1], JWT_SECRET);
-      if (decoded.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-      
       const users = await User.find().select('-password');
       res.json(users);
-    } catch (err) {
-      res.status(401).json({ error: "Invalid token" });
+    } catch (err: any) {
+      console.error("Error fetching users:", err);
+      res.status(500).json({ error: "Database error: " + err.message });
     }
   });
 
-  app.post("/api/admin/users/:id/approve", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  app.post("/api/admin/users/:id/approve", authenticateAdmin, async (req, res) => {
     try {
-      const decoded: any = jwt.verify(authHeader.split(" ")[1], JWT_SECRET);
-      if (decoded.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-      
       const { expiryDate } = req.body;
       if (!expiryDate) return res.status(400).json({ error: "Expiry date is required" });
 
@@ -259,8 +271,8 @@ app.use('/api', async (req, res, next) => {
       await user.save();
       
       res.json({ message: "User approved" });
-    } catch (err) {
-      res.status(401).json({ error: "Invalid token" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
@@ -274,52 +286,37 @@ app.use('/api', async (req, res, next) => {
     }
   });
 
-  app.delete("/api/admin/users/:id", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  app.delete("/api/admin/users/:id", authenticateAdmin, async (req, res) => {
     try {
-      const decoded: any = jwt.verify(authHeader.split(" ")[1], JWT_SECRET);
-      if (decoded.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-      
       const user = await User.findByIdAndDelete(req.params.id);
       if (!user) return res.status(404).json({ error: "User not found" });
       
       res.json({ message: "User deleted/rejected successfully" });
-    } catch (err) {
-      res.status(401).json({ error: "Invalid token" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/admin/profile", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  app.get("/api/admin/profile", authenticateAdmin, async (req, res) => {
     try {
-      const decoded: any = jwt.verify(authHeader.split(" ")[1], JWT_SECRET);
-      if (decoded.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-      
-      const admin = await User.findById(decoded.id).select('-password');
+      const admin = await User.findById((req as any).admin.id).select('-password');
       if (!admin) return res.status(404).json({ error: "Admin not found" });
       
       res.json(admin);
-    } catch (err) {
-      res.status(401).json({ error: "Invalid token" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 
-  app.put("/api/admin/profile", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  app.put("/api/admin/profile", authenticateAdmin, async (req, res) => {
     try {
-      const decoded: any = jwt.verify(authHeader.split(" ")[1], JWT_SECRET);
-      if (decoded.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-      
       const { username, email, password } = req.body;
       const updateData: any = {};
       if (username) updateData.username = username;
       if (email) updateData.email = email;
       if (password) updateData.password = password; // In a real app, hash this!
 
-      const admin = await User.findByIdAndUpdate(decoded.id, updateData, { new: true });
+      const admin = await User.findByIdAndUpdate((req as any).admin.id, updateData, { new: true });
       if (!admin) return res.status(404).json({ error: "Admin not found" });
       
       res.json({ message: "Profile updated successfully" });
@@ -343,21 +340,16 @@ app.use('/api', async (req, res, next) => {
     }
   });
 
-  app.post("/api/admin/settings", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  app.post("/api/admin/settings", authenticateAdmin, async (req, res) => {
     try {
-      const decoded: any = jwt.verify(authHeader.split(" ")[1], JWT_SECRET);
-      if (decoded.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-      
       const settings = await Settings.findOneAndUpdate(
         { settingsId: 'global' },
         { ...req.body },
         { new: true, upsert: true }
       );
       res.json(settings);
-    } catch (err) {
-      res.status(401).json({ error: "Invalid token" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

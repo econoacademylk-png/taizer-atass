@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTrading } from '../stores/useTradingStore';
 import { ChartType } from '../types/chart';
-import { Search, ChevronDown, Check, X } from 'lucide-react';
+import { Search, ChevronDown, Check, X, Star, Trash2, Plus } from 'lucide-react';
 import { FAEngineModal } from './FAEngineModal';
 
 const highlightMatch = (text: string, query: string) => {
@@ -132,6 +132,72 @@ export const Header: React.FC = () => {
   const listContainerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // --- FAVORITE COINS SYSTEM ---
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('favorite_coins');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Failed to parse favorites', e);
+    }
+    return ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', 'SUIUSDT', 'PEPEUSDT'];
+  });
+
+  const [isFavoriteOpen, setIsFavoriteOpen] = useState(false);
+  const [favSearchQuery, setFavSearchQuery] = useState('');
+  const [symbolTab, setSymbolTab] = useState<'all' | 'fav'>('all');
+  const favoritePanelRef = useRef<HTMLDivElement>(null);
+  const favoriteBtnRef = useRef<HTMLButtonElement>(null);
+  const favoriteBtnMobileRef = useRef<HTMLButtonElement>(null);
+
+  const addFavorite = (sym: string) => {
+    const upper = sym.toUpperCase().trim();
+    if (!upper) return;
+    if (!favorites.includes(upper)) {
+      const updated = [...favorites, upper];
+      setFavorites(updated);
+      localStorage.setItem('favorite_coins', JSON.stringify(updated));
+    }
+  };
+
+  const removeFavorite = (sym: string) => {
+    const updated = favorites.filter(f => f !== sym);
+    setFavorites(updated);
+    localStorage.setItem('favorite_coins', JSON.stringify(updated));
+  };
+
+  const toggleFavorite = (sym: string) => {
+    if (favorites.includes(sym)) {
+      removeFavorite(sym);
+    } else {
+      addFavorite(sym);
+    }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (
+        favoritePanelRef.current && 
+        !favoritePanelRef.current.contains(target) &&
+        favoriteBtnRef.current &&
+        !favoriteBtnRef.current.contains(target) &&
+        (favoriteBtnMobileRef.current ? !favoriteBtnMobileRef.current.contains(target) : true)
+      ) {
+        setIsFavoriteOpen(false);
+      }
+    }
+    if (isFavoriteOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isFavoriteOpen]);
+
   useEffect(() => {
     setFocusedIndex(0);
   }, [searchQuery, isSearchOpen]);
@@ -200,6 +266,23 @@ export const Header: React.FC = () => {
     if (!aStarts && bStarts) return 1;
     return a.localeCompare(b);
   });
+
+  const displayedSymbols = (symbolTab === 'fav'
+    ? favorites.filter((sym) => sym.toLowerCase().includes(searchQuery.toLowerCase()))
+    : filteredSymbols
+  ).sort((a, b) => {
+    const query = searchQuery.toLowerCase();
+    const aStarts = a.toLowerCase().startsWith(query);
+    const bStarts = b.toLowerCase().startsWith(query);
+    if (aStarts && !bStarts) return -1;
+    if (!aStarts && bStarts) return 1;
+    return a.localeCompare(b);
+  });
+
+  const searchedFavSuggestions = symbols.filter(sym => 
+    favSearchQuery.trim() && 
+    sym.toLowerCase().includes(favSearchQuery.toLowerCase().trim())
+  ).slice(0, 10);
 
   const timeframes = ['1S', '1M', '5M', '15M', '1H', '4H', '1D'];
 
@@ -631,40 +714,94 @@ export const Header: React.FC = () => {
       
       {/* DROPDOWN PORTAL (Extracted from overflow-x-auto container) */}
       {isSearchOpen && (
-            <div ref={listContainerRef} className="absolute top-[38px] left-[65px] w-52 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+            <div ref={listContainerRef} className="absolute top-[38px] left-[65px] w-64 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+              {/* Tabs: ALL vs FAVORITES */}
+              <div className="flex items-center border-b border-slate-800/80 bg-slate-900/90 p-1 text-[10px] font-bold gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSymbolTab('all');
+                    setFocusedIndex(0);
+                  }}
+                  className={`flex-1 py-1 rounded transition-colors text-center cursor-pointer ${
+                    symbolTab === 'all'
+                      ? 'bg-slate-800 text-cyan-300 font-extrabold shadow-sm border border-slate-700'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  ALL COINS ({symbols.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSymbolTab('fav');
+                    setFocusedIndex(0);
+                  }}
+                  className={`flex-1 py-1 rounded transition-colors text-center flex items-center justify-center gap-1 cursor-pointer ${
+                    symbolTab === 'fav'
+                      ? 'bg-amber-500/20 text-amber-300 font-extrabold border border-amber-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-amber-400'
+                  }`}
+                >
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  <span>FAVORITES ({favorites.length})</span>
+                </button>
+              </div>
+
               <div 
                 ref={listRef}
-                className="max-h-64 overflow-y-auto py-1 no-scrollbar bg-slate-950/95"
+                className="max-h-64 overflow-y-auto py-1 no-scrollbar bg-slate-950/95 divide-y divide-slate-900/50"
               >
-                {filteredSymbols.length > 0 ? (
-                  filteredSymbols.map((sym, idx) => (
-                    <button
-                      key={sym}
-                      onClick={() => {
-                        setActiveSymbol(sym);
-                        setIsSearchOpen(false);
-                        setSearchQuery('');
-                      }}
-                      onMouseEnter={() => setFocusedIndex(idx)}
-                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-all duration-75 cursor-pointer ${
-                        idx === focusedIndex
-                          ? 'bg-slate-900 text-cyan-300 font-extrabold'
-                          : sym === activeSymbol
-                          ? 'bg-cyan-500/5 text-cyan-400 font-bold'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      <span className="font-mono tracking-wide">
-                        {highlightMatch(sym, searchQuery)}
-                      </span>
-                      {sym === activeSymbol && (
-                        <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0 ml-2" />
-                      )}
-                    </button>
-                  ))
+                {displayedSymbols.length > 0 ? (
+                  displayedSymbols.map((sym, idx) => {
+                    const isFav = favorites.includes(sym);
+                    return (
+                      <div
+                        key={sym}
+                        onMouseEnter={() => setFocusedIndex(idx)}
+                        className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between transition-all duration-75 ${
+                          idx === focusedIndex
+                            ? 'bg-slate-900 text-cyan-300 font-extrabold'
+                            : sym === activeSymbol
+                            ? 'bg-cyan-500/5 text-cyan-400 font-bold'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveSymbol(sym);
+                            setIsSearchOpen(false);
+                            setSearchQuery('');
+                          }}
+                          className="flex-1 text-left flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span className="font-mono tracking-wide">
+                            {highlightMatch(sym, searchQuery)}
+                          </span>
+                          {sym === activeSymbol && (
+                            <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0 ml-1" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(sym);
+                          }}
+                          className="p-1 hover:scale-115 transition-transform cursor-pointer ml-1"
+                          title={isFav ? `Remove ${sym} from favorites` : `Add ${sym} to favorites`}
+                        >
+                          <Star className={`w-3.5 h-3.5 ${isFav ? 'fill-amber-400 text-amber-400' : 'text-slate-600 hover:text-amber-400'}`} />
+                        </button>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="text-slate-500 text-xs text-center py-6 font-sans">
-                    No coins found matching "{searchQuery}"
+                    {symbolTab === 'fav' 
+                      ? "No favorite coins found." 
+                      : `No coins found matching "${searchQuery}"`}
                   </div>
                 )}
               </div>
@@ -698,15 +835,15 @@ export const Header: React.FC = () => {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
                   if (!isSearchOpen) setIsSearchOpen(true);
-                  setFocusedIndex((prev) => filteredSymbols.length > 0 ? (prev + 1) % filteredSymbols.length : 0);
+                  setFocusedIndex((prev) => displayedSymbols.length > 0 ? (prev + 1) % displayedSymbols.length : 0);
                 } else if (e.key === 'ArrowUp') {
                   e.preventDefault();
                   if (!isSearchOpen) setIsSearchOpen(true);
-                  setFocusedIndex((prev) => filteredSymbols.length > 0 ? (prev - 1 + filteredSymbols.length) % filteredSymbols.length : 0);
+                  setFocusedIndex((prev) => displayedSymbols.length > 0 ? (prev - 1 + displayedSymbols.length) % displayedSymbols.length : 0);
                 } else if (e.key === 'Enter') {
                   e.preventDefault();
-                  if (isSearchOpen && filteredSymbols.length > 0 && filteredSymbols[focusedIndex]) {
-                    setActiveSymbol(filteredSymbols[focusedIndex]);
+                  if (isSearchOpen && displayedSymbols.length > 0 && displayedSymbols[focusedIndex]) {
+                    setActiveSymbol(displayedSymbols[focusedIndex]);
                     setIsSearchOpen(false);
                     e.currentTarget.blur();
                   } else if (searchQuery.trim().length > 0) {
@@ -725,7 +862,15 @@ export const Header: React.FC = () => {
             <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          
+          {/* Quick star toggle for current coin */}
+          <button
+            type="button"
+            onClick={() => toggleFavorite(activeSymbol)}
+            className="p-1 hover:scale-115 transition-all cursor-pointer rounded"
+            title={favorites.includes(activeSymbol) ? `Remove ${activeSymbol} from favorites` : `Add ${activeSymbol} to favorites`}
+          >
+            <Star className={`w-4 h-4 transition-colors ${favorites.includes(activeSymbol) ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_6px_rgba(245,158,11,0.6)]' : 'text-slate-600 hover:text-amber-400'}`} />
+          </button>
         </div>
 
         {/* TICK Selector */}
@@ -873,6 +1018,26 @@ export const Header: React.FC = () => {
         </button>
 
         <button
+          ref={favoriteBtnRef}
+          id="header-btn-FAVORITE"
+          onClick={() => setIsFavoriteOpen(prev => !prev)}
+          className={`h-7 px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border flex items-center gap-1.5 transition-all shrink-0 rounded whitespace-nowrap cursor-pointer ${
+            isFavoriteOpen
+              ? 'border-amber-400 text-amber-300 bg-amber-500/25 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
+              : 'border-amber-500/80 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+          }`}
+          title="Favorite Coins Watchlist"
+        >
+          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+          <span>FAVORITE</span>
+          {favorites.length > 0 && (
+            <span className="text-[9px] bg-amber-500/30 px-1.5 py-0.2 rounded-full font-mono text-amber-200">
+              {favorites.length}
+            </span>
+          )}
+        </button>
+
+        <button
           id="header-btn-LOGOUT"
           onClick={() => {
             localStorage.removeItem('token');
@@ -948,6 +1113,15 @@ export const Header: React.FC = () => {
               FOUND
             </button>
             <button
+              ref={favoriteBtnMobileRef}
+              id="header-btn-FAVORITE-mobile"
+              onClick={() => setIsFavoriteOpen(prev => !prev)}
+              className="h-7 px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border border-amber-500/80 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all shrink-0 rounded whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+            >
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <span>FAVORITE ({favorites.length})</span>
+            </button>
+            <button
               id="header-btn-LOGOUT-mobile"
               onClick={() => {
                 localStorage.removeItem('token');
@@ -1003,6 +1177,205 @@ export const Header: React.FC = () => {
         onClose={() => handleToggle('FOUND')} 
         activeSymbol={activeSymbol} 
       />
+
+      {/* --- FAVORITE COINS POPUP PANEL --- */}
+      {isFavoriteOpen && (
+        <div 
+          ref={favoritePanelRef}
+          className="fixed top-24 right-2 sm:right-6 w-[320px] sm:w-[370px] bg-[#090d14]/98 border border-amber-500/40 rounded-xl shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_25px_rgba(245,158,11,0.2)] z-[150] backdrop-blur-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 font-sans"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-3.5 py-2.5 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border-b border-amber-500/20">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              </div>
+              <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                Favorite Coins
+              </span>
+              <span className="text-[10px] bg-amber-500/25 text-amber-300 font-mono font-bold px-1.5 py-0.2 rounded border border-amber-500/30">
+                {favorites.length}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsFavoriteOpen(false)}
+              className="text-slate-400 hover:text-white p-1 rounded hover:bg-white/5 transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Quick Add Current Coin Banner */}
+          <div className="p-2.5 border-b border-slate-800/80 bg-slate-950/60">
+            {favorites.includes(activeSymbol) ? (
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs">
+                <span className="flex items-center gap-1.5 text-amber-300 font-mono font-bold">
+                  <Check className="w-3.5 h-3.5 text-amber-400" />
+                  {activeSymbol} is in Favorites
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeFavorite(activeSymbol)}
+                  className="text-[10px] text-rose-400 hover:text-rose-300 underline font-semibold transition-colors cursor-pointer"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => addFavorite(activeSymbol)}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-500/10 hover:from-amber-500/30 hover:to-yellow-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-amber-400" />
+                <span>Add Current Coin ({activeSymbol}) to Favorites</span>
+              </button>
+            )}
+          </div>
+
+          {/* Search to Add More Coins */}
+          <div className="p-2.5 border-b border-slate-800/80 flex flex-col gap-1.5 bg-slate-950/40">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={favSearchQuery}
+                onChange={(e) => setFavSearchQuery(e.target.value)}
+                placeholder="Search coin to add (e.g. SOL, PEPE, SUI)..."
+                className="w-full bg-slate-900/90 border border-slate-800 focus:border-amber-500/60 pl-8 pr-7 py-1.5 rounded-lg text-xs font-mono text-white placeholder:text-slate-500 outline-none uppercase transition-all"
+              />
+              {favSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setFavSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Quick Search Suggestions */}
+            {favSearchQuery.trim() && (
+              <div className="max-h-36 overflow-y-auto no-scrollbar border border-slate-800 rounded-lg bg-slate-950 p-1 divide-y divide-slate-800/40">
+                {searchedFavSuggestions.length > 0 ? (
+                  searchedFavSuggestions.map((sym) => {
+                    const isFav = favorites.includes(sym);
+                    return (
+                      <div
+                        key={sym}
+                        className="flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-900 rounded text-xs transition-colors"
+                      >
+                        <span className="font-mono font-bold text-slate-200">{sym}</span>
+                        {isFav ? (
+                          <span className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Added
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              addFavorite(sym);
+                              setFavSearchQuery('');
+                            }}
+                            className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" /> Add
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-[11px] text-slate-500 text-center py-2">
+                    No coins matching "{favSearchQuery}"
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Favorite Coins List */}
+          <div className="flex-1 max-h-[260px] overflow-y-auto no-scrollbar p-2 flex flex-col gap-1.5">
+            {favorites.length > 0 ? (
+              favorites.map((sym) => {
+                const isActive = sym === activeSymbol;
+                return (
+                  <div
+                    key={sym}
+                    className={`group flex items-center justify-between px-3 py-2 rounded-lg border transition-all ${
+                      isActive
+                        ? 'bg-cyan-950/50 border-cyan-500/50 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                        : 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-800/70 hover:border-amber-500/40 text-slate-200'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveSymbol(sym);
+                        setIsFavoriteOpen(false);
+                      }}
+                      className="flex-1 flex items-center gap-2.5 text-left cursor-pointer"
+                      title={`Switch chart to ${sym}`}
+                    >
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                      <span className="font-mono font-bold text-xs tracking-wider">
+                        {sym}
+                      </span>
+                      {isActive && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-1.5 py-0.2 rounded ml-1">
+                          Active
+                        </span>
+                      )}
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => removeFavorite(sym)}
+                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"
+                        title={`Remove ${sym} from favorites`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 px-4 text-slate-500 text-xs flex flex-col items-center gap-2">
+                <Star className="w-8 h-8 text-slate-700 stroke-1" />
+                <p>No favorite coins yet.</p>
+                <p className="text-[10px] text-slate-600">
+                  Search above or click "+ Add Current Coin" to build your watchlist.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer with Clear All / Info */}
+          {favorites.length > 0 && (
+            <div className="px-3 py-2 bg-black/60 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <Check className="w-3 h-3 text-cyan-400" /> Click coin to load chart
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to clear all favorites?")) {
+                    setFavorites([]);
+                    localStorage.setItem('favorite_coins', JSON.stringify([]));
+                  }
+                }}
+                className="hover:text-rose-400 transition-colors cursor-pointer"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

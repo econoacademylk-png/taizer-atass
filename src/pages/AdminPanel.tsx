@@ -93,6 +93,12 @@ export function AdminPanel() {
     return () => clearInterval(interval);
   }, [token, navigate, user.role]);
 
+  const handleAuthError = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/ceo-login?expired=true');
+  };
+
   const fetchOnlineUsers = async () => {
     try {
       const res = await fetch(API_BASE + '/api/admin/onlineUsers', {
@@ -101,6 +107,8 @@ export function AdminPanel() {
       if (res.ok) {
         const data = await res.json();
         setOnlineUsersCount(data.activeCount || 0);
+      } else if (res.status === 401 || res.status === 403) {
+        handleAuthError();
       }
     } catch (err) {}
   };
@@ -113,6 +121,8 @@ export function AdminPanel() {
       if (res.ok) {
         const data = await res.json();
         setProfileForm(prev => ({ ...prev, username: data.username, email: data.email || '' }));
+      } else if (res.status === 401 || res.status === 403) {
+        handleAuthError();
       }
     } catch (err) {}
   };
@@ -124,8 +134,14 @@ export function AdminPanel() {
       });
       if (res.ok) {
         setUsers(await res.json());
+        setError('');
       } else {
-        setError('Failed to fetch users');
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401 || res.status === 403) {
+          handleAuthError();
+          return;
+        }
+        setError(data.error || 'Failed to fetch users');
       }
     } catch (err: any) {
       setError(err.message);
@@ -395,8 +411,17 @@ export function AdminPanel() {
 
       <main className="flex-1 p-8 overflow-y-auto relative z-10">
         {error && (
-          <div className="mb-6 text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-4 rounded-xl backdrop-blur-md">
-            {error}
+          <div className="mb-6 text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-4 rounded-xl backdrop-blur-md flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="w-5 h-5 shrink-0 text-red-400" />
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer"
+            >
+              Log In Again
+            </button>
           </div>
         )}
 

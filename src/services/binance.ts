@@ -132,7 +132,7 @@ export async function fetchMarketDepth(symbol: string, limit: number = 30): Prom
       asks: data.asks || []
     };
   } catch (error) {
-    constion.warn('Market depth fetch failed:', error);
+    console.warn('Market depth fetch failed:', error);
     return null;
   }
 }

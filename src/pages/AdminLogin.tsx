@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { API_BASE } from '../config/api';
 
@@ -10,6 +10,14 @@ export function AdminLogin() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('expired') === 'true') {
+      setError('Your CEO session has expired. Please log in again.');
+    }
+  }, [location.search]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
