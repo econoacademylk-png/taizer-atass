@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Power, CheckCircle, Clock, Users, Settings, LayoutDashboard, LogOut, ArrowLeft, ShieldAlert, CreditCard, XCircle, User as UserIcon, Activity } from 'lucide-react';
+import {
+  LayoutDashboard, Users, Settings, User as UserIcon, CheckCircle, 
+  XCircle, Clock, ShieldAlert, LogOut, ArrowLeft, CreditCard, Activity, Power, Zap
+} from 'lucide-react';
+import { SignalFormModal } from '../components/SignalFormModal';
 import { API_BASE } from '../config/api';
 
 type Tab = 'dashboard' | 'users' | 'settings' | 'profile';
@@ -67,6 +71,8 @@ export function AdminPanel() {
 
   const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
   const [expiryDaysInput, setExpiryDaysInput] = useState<number>(30);
+
+  const [isSignalFormOpen, setIsSignalFormOpen] = useState(false);
 
   const [pendingSearch, setPendingSearch] = useState('');
   const [registeredSearch, setRegisteredSearch] = useState('');
@@ -390,6 +396,16 @@ export function AdminPanel() {
             }`}
           >
             <UserIcon size={20} className={activeTab === 'profile' ? 'text-emerald-400' : ''} /> CEO Profile
+          </button>
+
+          {/* Divider */}
+          <div className="w-full h-[1px] bg-white/5 my-1" />
+
+          <button 
+            onClick={() => setIsSignalFormOpen(true)}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.15)]"
+          >
+            <Zap size={20} className="fill-yellow-400" /> Signal Generator
           </button>
         </nav>
 
@@ -848,6 +864,11 @@ export function AdminPanel() {
           </div>
         )}
       </main>
+
+      <SignalFormModal 
+        isOpen={isSignalFormOpen} 
+        onClose={() => setIsSignalFormOpen(false)} 
+      />
     </div>
   );
 }
