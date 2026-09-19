@@ -13,6 +13,8 @@ import { AlertTriangle, BarChart2, List, Settings, PenTool } from 'lucide-react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 import { useSMCScanner } from './hooks/useSMCScanner';
+import { useLEZScanner } from './hooks/useLEZScanner';
+import { LEZAlertToast } from './components/LEZAlertToast';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { AdminPanel } from './pages/AdminPanel';
@@ -23,6 +25,7 @@ import { API_BASE } from './config/api';
 function DashboardContent() {
   const { setIndicators, setSMC, error, mobileTab, setMobileTab, setGlobalConfig } = useTrading();
   useSMCScanner();
+  useLEZScanner();
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
 
@@ -92,6 +95,9 @@ function DashboardContent() {
     <div className="flex flex-col h-[100dvh] w-screen bg-[#07090b] text-slate-300 overflow-hidden select-none font-sans">
       {/* 1. TOP UTILITY HEADER */}
       <Header />
+
+      {/* LEZ Live Signal Real-time Alert Toast */}
+      <LEZAlertToast />
 
       {/* 2. INNER WORKSPACE WRAPPER */}
       <div className="flex-1 flex flex-col md:flex-row min-h-0 relative">

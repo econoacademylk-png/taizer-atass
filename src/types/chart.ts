@@ -205,3 +205,17 @@ export interface NewsEvent {
   previous: string;
 }
 
+export interface LEZLiveSignal {
+  id: string;
+  symbol: string;
+  type: 'buy' | 'sell';
+  qualityScore: number;
+  time: number; // Candle timestamp
+  detectedAt: number; // Timestamp when scanned
+  entryPrice: number;
+  slPrice: number;
+  tpPrice: number;
+  timeframe: string;
+  isFresh: boolean; // True if formed within the last 2 minutes
+}
+

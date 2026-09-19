@@ -6,8 +6,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTrading } from '../stores/useTradingStore';
 import { ChartType } from '../types/chart';
-import { Search, ChevronDown, Check, X, Star, Trash2, Plus } from 'lucide-react';
+import { Search, ChevronDown, Check, X, Star, Trash2, Plus, Zap } from 'lucide-react';
 import { FAEngineModal } from './FAEngineModal';
+import { useLEZStore } from '../stores/useLEZStore';
+import { LEZSignalsModal } from './LEZSignalsModal';
 
 const highlightMatch = (text: string, query: string) => {
   if (!query) return <span className="font-mono tracking-wider font-bold">{text}</span>;
@@ -152,6 +154,10 @@ export const Header: React.FC = () => {
   const favoritePanelRef = useRef<HTMLDivElement>(null);
   const favoriteBtnRef = useRef<HTMLButtonElement>(null);
   const favoriteBtnMobileRef = useRef<HTMLButtonElement>(null);
+
+  // --- LEZ SIGNALS HUB SYSTEM ---
+  const { signals: lezSignals, freshCount: lezFreshCount } = useLEZStore();
+  const [isSignalsModalOpen, setIsSignalsModalOpen] = useState(false);
 
   const addFavorite = (sym: string) => {
     const upper = sym.toUpperCase().trim();
@@ -1017,6 +1023,32 @@ export const Header: React.FC = () => {
           FOUND
         </button>
 
+        {/* LEZ SIGNALS HUB BUTTON */}
+        <button
+          id="header-btn-SIGNALS"
+          onClick={() => setIsSignalsModalOpen(true)}
+          className={`h-7 px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border flex items-center gap-1.5 transition-all shrink-0 rounded whitespace-nowrap cursor-pointer ${
+            lezFreshCount > 0
+              ? 'border-emerald-400 text-emerald-300 bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.5)] animate-pulse'
+              : isSignalsModalOpen
+              ? 'border-cyan-400 text-cyan-300 bg-cyan-500/25 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+              : 'border-cyan-500/70 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+          }`}
+          title="LEZ Live Signals Hub"
+        >
+          <Zap className={`w-3.5 h-3.5 ${lezFreshCount > 0 ? 'fill-emerald-400 text-emerald-400 animate-bounce' : 'fill-cyan-400 text-cyan-400'}`} />
+          <span>SIGNALS</span>
+          {lezFreshCount > 0 ? (
+            <span className="text-[9px] bg-emerald-500 text-black font-black px-1.5 py-0.2 rounded-full font-mono">
+              {lezFreshCount} NEW
+            </span>
+          ) : lezSignals.length > 0 ? (
+            <span className="text-[9px] bg-cyan-500/30 px-1.5 py-0.2 rounded-full font-mono text-cyan-200">
+              {lezSignals.length}
+            </span>
+          ) : null}
+        </button>
+
         <button
           ref={favoriteBtnRef}
           id="header-btn-FAVORITE"
@@ -1111,6 +1143,18 @@ export const Header: React.FC = () => {
               className={getButtonStyle('live-cyan', isButtonActive('FOUND'))}
             >
               FOUND
+            </button>
+            <button
+              id="header-btn-SIGNALS-mobile"
+              onClick={() => setIsSignalsModalOpen(true)}
+              className={`h-7 px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border flex items-center gap-1.5 transition-all shrink-0 rounded whitespace-nowrap cursor-pointer ${
+                lezFreshCount > 0
+                  ? 'border-emerald-400 text-emerald-300 bg-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.5)] animate-pulse'
+                  : 'border-cyan-500/70 text-cyan-400 bg-cyan-500/10'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 fill-cyan-400 text-cyan-400" />
+              <span>SIGNALS {lezFreshCount > 0 ? `(${lezFreshCount} NEW)` : `(${lezSignals.length})`}</span>
             </button>
             <button
               ref={favoriteBtnMobileRef}
@@ -1376,6 +1420,12 @@ export const Header: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* LEZ Live Signals Hub Modal */}
+      <LEZSignalsModal
+        isOpen={isSignalsModalOpen}
+        onClose={() => setIsSignalsModalOpen(false)}
+      />
     </div>
   );
 };
