@@ -1000,7 +1000,12 @@ export function AdminPanel() {
 
       <SignalFormModal 
         isOpen={isSignalFormOpen} 
-        onClose={() => setIsSignalFormOpen(false)} 
+        onClose={() => setIsSignalFormOpen(false)}
+        onSuccess={() => {
+          setIsSignalFormOpen(false);
+          setActiveTab('signals');
+          fetchSignals();
+        }}
       />
     </div>
   );

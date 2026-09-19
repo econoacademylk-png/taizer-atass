@@ -6,9 +6,10 @@ interface SignalFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultCoin?: string;
+  onSuccess?: () => void;
 }
 
-export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClose, defaultCoin = 'BTC' }) => {
+export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClose, defaultCoin = 'BTC', onSuccess }) => {
   const [signalNumber, setSignalNumber] = useState<number>(1);
   const [direction, setDirection] = useState<'LONG' | 'SHORT'>('LONG');
   const [coin, setCoin] = useState<string>(defaultCoin);
@@ -101,15 +102,19 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
     }
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     navigator.clipboard.writeText(generateMessage());
-    saveSignalToDB();
+    await saveSignalToDB();
+    handleNextSignal();
+    if (onSuccess) onSuccess();
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const text = encodeURIComponent(generateMessage());
     window.open(`https://wa.me/?text=${text}`, '_blank');
-    saveSignalToDB();
+    await saveSignalToDB();
+    handleNextSignal();
+    if (onSuccess) onSuccess();
   };
 
   const handleClear = () => {
