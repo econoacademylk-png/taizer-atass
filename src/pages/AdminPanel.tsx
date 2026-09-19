@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Settings, User as UserIcon, CheckCircle, 
-  XCircle, Clock, ShieldAlert, LogOut, ArrowLeft, CreditCard, Activity, Power, Zap
+  XCircle, Clock, ShieldAlert, LogOut, ArrowLeft, CreditCard, Activity, Power, Zap, Trash2
 } from 'lucide-react';
 import { SignalFormModal } from '../components/SignalFormModal';
 import { API_BASE } from '../config/api';
@@ -235,6 +235,21 @@ export function AdminPanel() {
       if (res.ok) {
         const updated = await res.json();
         setSignals(signals.map(s => s._id === id ? updated : s));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteSignal = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this signal?")) return;
+    try {
+      const res = await fetch(API_BASE + `/api/admin/signals/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setSignals(signals.filter(s => s._id !== id));
       }
     } catch (err) {
       console.error(err);
@@ -803,6 +818,14 @@ export function AdminPanel() {
                           </button>
                         </>
                       )}
+                      
+                      <button
+                        onClick={() => deleteSignal(s._id)}
+                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ml-2"
+                        title="Delete Signal"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                 ))}
