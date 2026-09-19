@@ -7,7 +7,7 @@ import {
 import { SignalFormModal } from '../components/SignalFormModal';
 import { API_BASE } from '../config/api';
 
-type Tab = 'dashboard' | 'users' | 'settings' | 'profile';
+type Tab = 'dashboard' | 'users' | 'signals' | 'settings' | 'profile';
 
 const INDICATOR_LIST = [
   { key: 'showEMA', name: 'EMA' },
@@ -77,11 +77,22 @@ export function AdminPanel() {
   const [pendingSearch, setPendingSearch] = useState('');
   const [registeredSearch, setRegisteredSearch] = useState('');
 
+  const [signals, setSignals] = useState<any[]>([]);
+
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  const fetchSignals = async () => {
+    try {
+      const res = await fetch(API_BASE + '/api/admin/signals', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) setSignals(await res.json());
+    } catch (err) {}
+  };
 
   useEffect(() => {
     if (!token || user.role !== 'admin') {
@@ -92,6 +103,7 @@ export function AdminPanel() {
     fetchSettings();
     fetchProfile();
     fetchOnlineUsers();
+    fetchSignals();
     
     const interval = setInterval(() => {
       fetchUsers();
@@ -208,6 +220,39 @@ export function AdminPanel() {
     } catch (err: any) {
       alert(err.message);
     }
+  };
+
+  const updateSignalStatus = async (id: string, status: 'Profit' | 'Loss' | 'Pending') => {
+    try {
+      const res = await fetch(API_BASE + `/api/admin/signals/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setSignals(signals.map(s => s._id === id ? updated : s));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const exportSignalsCSV = () => {
+    const header = "Signal Number,Coin,Direction,Leverage,Entry Price,TP Targets,Stop Loss,Status,Date\n";
+    const rows = signals.map(s => 
+      `${s.signalNumber},${s.coin},${s.direction},${s.leverage},${s.entryPrice},"${s.tpTargets.join('; ')}",${s.stopLoss},${s.status},${new Date(s.createdAt).toLocaleDateString()}`
+    ).join("\n");
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Taizer_Signals_${new Date().toLocaleDateString()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const saveSettings = async (newSettings: any) => {
@@ -375,6 +420,17 @@ export function AdminPanel() {
                 {pendingUsers.length} NEW
               </span>
             )}
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('signals')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${
+              activeTab === 'signals' 
+                ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border border-yellow-500/30' 
+                : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+            }`}
+          >
+            <Zap size={20} className={activeTab === 'signals' ? 'text-yellow-400' : ''} /> Signal History
           </button>
 
           <button 
@@ -674,6 +730,83 @@ export function AdminPanel() {
                   ))}
                   {approvedUsers.length === 0 && <div className="text-slate-500 text-center py-8">No approved users yet.</div>}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'signals' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col h-full space-y-8">
+            <div className="flex justify-between items-center mb-2">
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                <Zap className="text-yellow-400" /> WhatsApp Signal History
+              </h1>
+              <button
+                onClick={exportSignalsCSV}
+                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors"
+              >
+                Export to CSV
+              </button>
+            </div>
+            
+            <div className="bg-white/5 border border-yellow-500/20 rounded-2xl backdrop-blur-xl flex flex-col overflow-hidden">
+              <div className="p-4 border-b border-yellow-500/20 bg-black/20 font-bold text-slate-400 text-sm grid grid-cols-12 gap-4 items-center">
+                <div className="col-span-1">#</div>
+                <div className="col-span-2">Date/Time</div>
+                <div className="col-span-2">Coin / Dir</div>
+                <div className="col-span-4">Trade Details</div>
+                <div className="col-span-3 text-right">Performance Status</div>
+              </div>
+              <div className="p-4 flex flex-col gap-3">
+                {signals.map(s => (
+                  <div key={s._id} className="grid grid-cols-12 gap-4 items-center bg-black/20 p-4 rounded-xl border border-yellow-500/10 hover:border-yellow-500/30 transition-colors">
+                    <div className="col-span-1 font-bold text-yellow-400">
+                      #{String(s.signalNumber).padStart(3, '0')}
+                    </div>
+                    <div className="col-span-2 text-xs text-slate-300">
+                      <div>{new Date(s.createdAt).toLocaleDateString()}</div>
+                      <div className="text-slate-500">{new Date(s.createdAt).toLocaleTimeString()}</div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="font-bold text-white text-sm">{s.coin}</div>
+                      <div className={`text-xs font-bold ${s.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {s.direction} {s.leverage}
+                      </div>
+                    </div>
+                    <div className="col-span-4 text-xs text-slate-300 space-y-1">
+                      <div><span className="text-slate-500">Entry:</span> {s.entryPrice || 'Market'}</div>
+                      <div><span className="text-slate-500">TP:</span> {s.tpTargets.join(' • ')}</div>
+                      <div><span className="text-slate-500">SL:</span> <span className="text-rose-400">{s.stopLoss}</span></div>
+                    </div>
+                    <div className="col-span-3 flex justify-end gap-2 items-center">
+                      {s.status === 'Profit' ? (
+                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
+                          <CheckCircle size={16} /> PROFIT
+                        </span>
+                      ) : s.status === 'Loss' ? (
+                        <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
+                          <XCircle size={16} /> LOSS
+                        </span>
+                      ) : (
+                        <>
+                          <button 
+                            onClick={() => updateSignalStatus(s._id, 'Profit')}
+                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <CheckCircle size={14} /> Profit
+                          </button>
+                          <button 
+                            onClick={() => updateSignalStatus(s._id, 'Loss')}
+                            className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <XCircle size={14} /> Loss
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {signals.length === 0 && <div className="text-slate-500 text-center py-8">No signals generated yet.</div>}
               </div>
             </div>
           </div>

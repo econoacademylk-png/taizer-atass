@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Share2, Eye, Edit2, Zap, Target, Crosshair, Check } from 'lucide-react';
+import { API_BASE } from '../config/api';
 
 interface SignalFormModalProps {
   isOpen: boolean;
@@ -69,13 +70,46 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
     return msg;
   };
 
+  const saveSignalToDB = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const payload = {
+        signalNumber,
+        coin: getFormattedCoin(),
+        direction,
+        leverage,
+        entryType,
+        entryPrice,
+        tpTargets: tpValues.filter((_, i) => tpEnabled[i] && tpValues[i]),
+        stopLoss,
+        walletUsage,
+        status: 'Pending'
+      };
+
+      await fetch(`${API_BASE}/api/admin/signals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.error('Failed to save signal:', err);
+    }
+  };
+
   const handleCopy = () => {
     navigator.clipboard.writeText(generateMessage());
+    saveSignalToDB();
   };
 
   const handleShare = () => {
     const text = encodeURIComponent(generateMessage());
     window.open(`https://wa.me/?text=${text}`, '_blank');
+    saveSignalToDB();
   };
 
   const handleClear = () => {

@@ -9,6 +9,7 @@ import multer from "multer";
 import fs from "fs";
 import { User } from "./src/models/User.js";
 import { Settings } from "./src/models/Settings.js";
+import { WhatsAppSignal } from "./src/models/WhatsAppSignal.js";
 
 dotenv.config({ path: '.env.local' });
 dotenv.config(); // fallback to .env if .env.local doesn't exist
@@ -244,6 +245,56 @@ app.use('/api', async (req, res, next) => {
       res.json({ activeCount, users: usersList });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // --- WHATSAPP SIGNALS API ---
+  app.post("/api/admin/signals", authenticateAdmin, async (req, res) => {
+    try {
+      const { signalNumber } = req.body;
+      const existing = await WhatsAppSignal.findOne({ signalNumber });
+      if (existing) {
+        Object.assign(existing, req.body);
+        existing.updatedAt = new Date();
+        await existing.save();
+        return res.json(existing);
+      }
+      const newSignal = new WhatsAppSignal(req.body);
+      await newSignal.save();
+      res.status(201).json(newSignal);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/admin/signals", authenticateAdmin, async (req, res) => {
+    try {
+      const signals = await WhatsAppSignal.find().sort({ createdAt: -1 });
+      res.json(signals);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put("/api/admin/signals/:id", authenticateAdmin, async (req, res) => {
+    try {
+      const updated = await WhatsAppSignal.findByIdAndUpdate(
+        req.params.id, 
+        { status: req.body.status, updatedAt: new Date() }, 
+        { new: true }
+      );
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/admin/signals/:id", authenticateAdmin, async (req, res) => {
+    try {
+      await WhatsAppSignal.findByIdAndDelete(req.params.id);
+      res.json({ message: "Signal deleted" });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
     }
   });
 
