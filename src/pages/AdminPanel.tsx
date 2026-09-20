@@ -5,6 +5,7 @@ import {
   XCircle, Clock, ShieldAlert, LogOut, ArrowLeft, CreditCard, Activity, Power, Zap, Trash2, Menu, X, Edit2
 } from 'lucide-react';
 import { SignalFormModal } from '../components/SignalFormModal';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { API_BASE } from '../config/api';
 
 type Tab = 'dashboard' | 'users' | 'signals' | 'settings' | 'profile';
@@ -792,99 +793,101 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'signals' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col min-h-full space-y-8">
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-2">
-              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-                <Zap className="text-yellow-400" /> WhatsApp Signal History
-              </h1>
-              <button
-                onClick={exportSignalsCSV}
-                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors w-full md:w-auto"
-              >
-                Export to CSV
-              </button>
-            </div>
-            
-            <div className="bg-white/5 border border-yellow-500/20 rounded-2xl backdrop-blur-xl flex flex-col overflow-hidden">
-              <div className="p-4 border-b border-yellow-500/20 bg-black/20 font-bold text-slate-400 text-sm hidden md:grid md:grid-cols-12 gap-4 items-center">
-                <div className="col-span-1">#</div>
-                <div className="col-span-2">Date/Time</div>
-                <div className="col-span-2">Coin / Dir</div>
-                <div className="col-span-4">Trade Details</div>
-                <div className="col-span-3 text-right">Performance Status</div>
+          <ErrorBoundary>
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col min-h-full space-y-8">
+              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                  <Zap className="text-yellow-400" /> WhatsApp Signal History
+                </h1>
+                <button
+                  onClick={exportSignalsCSV}
+                  className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors w-full md:w-auto"
+                >
+                  Export to CSV
+                </button>
               </div>
-              <div className="p-4 flex flex-col gap-3">
-                {(Array.isArray(signals) ? signals : []).map(s => (
-                  <div key={s._id} className="flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center bg-black/20 p-4 rounded-xl border border-yellow-500/10 hover:border-yellow-500/30 transition-colors relative">
-                    <div className="md:col-span-1 font-bold text-yellow-400 text-lg md:text-base">
-                      #{String(s.signalNumber).padStart(3, '0')}
-                    </div>
-                    <div className="md:col-span-2 text-xs text-slate-300 md:static md:block text-left">
-                      <div>{s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</div>
-                      <div className="text-slate-500">{s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleTimeString() : ''}</div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <div className="font-bold text-white text-base md:text-sm">{s.coin || 'Unknown'}</div>
-                      <div className={`text-xs font-bold ${s.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {s.direction} {s.leverage}
+              
+              <div className="bg-white/5 border border-yellow-500/20 rounded-2xl backdrop-blur-xl flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-yellow-500/20 bg-black/20 font-bold text-slate-400 text-sm hidden md:grid md:grid-cols-12 gap-4 items-center">
+                  <div className="col-span-1">#</div>
+                  <div className="col-span-2">Date/Time</div>
+                  <div className="col-span-2">Coin / Dir</div>
+                  <div className="col-span-4">Trade Details</div>
+                  <div className="col-span-3 text-right">Performance Status</div>
+                </div>
+                <div className="p-4 flex flex-col gap-3">
+                  {(Array.isArray(signals) ? signals : []).map(s => (
+                    <div key={s._id} className="flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center bg-black/20 p-4 rounded-xl border border-yellow-500/10 hover:border-yellow-500/30 transition-colors relative">
+                      <div className="md:col-span-1 font-bold text-yellow-400 text-lg md:text-base">
+                        #{String(s.signalNumber).padStart(3, '0')}
+                      </div>
+                      <div className="md:col-span-2 text-xs text-slate-300 md:static md:block text-left">
+                        <div>{s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</div>
+                        <div className="text-slate-500">{s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleTimeString() : ''}</div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <div className="font-bold text-white text-base md:text-sm">{s.coin || 'Unknown'}</div>
+                        <div className={`text-xs font-bold ${s.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {s.direction} {s.leverage}
+                        </div>
+                      </div>
+                      <div className="md:col-span-4 text-xs text-slate-300 space-y-1 bg-black/30 md:bg-transparent p-3 md:p-0 rounded-lg">
+                        <div><span className="text-slate-500">Entry:</span> {s.entryPrice || 'Market'}</div>
+                        <div><span className="text-slate-500">TP:</span> {Array.isArray(s.tpTargets) ? s.tpTargets.join(' • ') : String(s.tpTargets || '')}</div>
+                        <div><span className="text-slate-500">SL:</span> <span className="text-rose-400">{s.stopLoss || 'None'}</span></div>
+                      </div>
+                      <div className="md:col-span-3 flex justify-start md:justify-end gap-2 items-center flex-wrap">
+                        {s.status === 'Profit' ? (
+                          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 w-full md:w-auto justify-center">
+                            <CheckCircle size={16} /> PROFIT
+                          </span>
+                        ) : s.status === 'Loss' ? (
+                          <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 w-full md:w-auto justify-center">
+                            <XCircle size={16} /> LOSS
+                          </span>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => updateSignalStatus(s._id, 'Profit')}
+                              className="flex-1 md:flex-none bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex justify-center items-center gap-1.5 cursor-pointer"
+                            >
+                              <CheckCircle size={14} /> Profit
+                            </button>
+                            <button 
+                              onClick={() => updateSignalStatus(s._id, 'Loss')}
+                              className="flex-1 md:flex-none bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex justify-center items-center gap-1.5 cursor-pointer"
+                            >
+                              <XCircle size={14} /> Loss
+                            </button>
+                          </>
+                        )}
+                        
+                        <button
+                          onClick={() => {
+                            setEditingSignal(s);
+                            setIsSignalFormOpen(true);
+                          }}
+                          className="p-1.5 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors cursor-pointer absolute top-4 right-12 md:static md:ml-2"
+                          title="Edit Signal"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        
+                        <button
+                          onClick={() => deleteSignal(s._id)}
+                          className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ml-2 absolute top-4 right-4 md:static md:ml-0"
+                          title="Delete Signal"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </div>
-                    <div className="md:col-span-4 text-xs text-slate-300 space-y-1 bg-black/30 md:bg-transparent p-3 md:p-0 rounded-lg">
-                      <div><span className="text-slate-500">Entry:</span> {s.entryPrice || 'Market'}</div>
-                      <div><span className="text-slate-500">TP:</span> {Array.isArray(s.tpTargets) ? s.tpTargets.join(' • ') : String(s.tpTargets || '')}</div>
-                      <div><span className="text-slate-500">SL:</span> <span className="text-rose-400">{s.stopLoss || 'None'}</span></div>
-                    </div>
-                    <div className="md:col-span-3 flex justify-start md:justify-end gap-2 items-center flex-wrap">
-                      {s.status === 'Profit' ? (
-                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 w-full md:w-auto justify-center">
-                          <CheckCircle size={16} /> PROFIT
-                        </span>
-                      ) : s.status === 'Loss' ? (
-                        <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 w-full md:w-auto justify-center">
-                          <XCircle size={16} /> LOSS
-                        </span>
-                      ) : (
-                        <>
-                          <button 
-                            onClick={() => updateSignalStatus(s._id, 'Profit')}
-                            className="flex-1 md:flex-none bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex justify-center items-center gap-1.5 cursor-pointer"
-                          >
-                            <CheckCircle size={14} /> Profit
-                          </button>
-                          <button 
-                            onClick={() => updateSignalStatus(s._id, 'Loss')}
-                            className="flex-1 md:flex-none bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex justify-center items-center gap-1.5 cursor-pointer"
-                          >
-                            <XCircle size={14} /> Loss
-                          </button>
-                        </>
-                      )}
-                      
-                      <button
-                        onClick={() => {
-                          setEditingSignal(s);
-                          setIsSignalFormOpen(true);
-                        }}
-                        className="p-1.5 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors cursor-pointer absolute top-4 right-12 md:static md:ml-2"
-                        title="Edit Signal"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      
-                      <button
-                        onClick={() => deleteSignal(s._id)}
-                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ml-2 absolute top-4 right-4 md:static md:ml-0"
-                        title="Delete Signal"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {signals.length === 0 && <div className="text-slate-500 text-center py-8">No signals generated yet.</div>}
+                  ))}
+                  {(!signals || signals.length === 0) && <div className="text-slate-500 text-center py-8">No signals generated yet.</div>}
+                </div>
               </div>
             </div>
-          </div>
+          </ErrorBoundary>
         )}
 
         {activeTab === 'settings' && (
