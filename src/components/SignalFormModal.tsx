@@ -34,14 +34,14 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
       if (editSignal) {
         setSignalNumber(editSignal.signalNumber);
         setDirection(editSignal.direction);
-        setCoin(editSignal.coin.replace('#', '').replace('/USDT', ''));
-        setLeverage(editSignal.leverage);
-        setEntryType(editSignal.entryType);
+        setCoin((editSignal.coin || '').replace('#', '').replace('/USDT', ''));
+        setLeverage(editSignal.leverage || '50X');
+        setEntryType(editSignal.entryType || 'Market');
         setEntryPrice(editSignal.entryPrice || '');
         
         const newTpEnabled = [false, false, false, false];
         const newTpValues = ['', '', '', ''];
-        if (editSignal.tpTargets) {
+        if (Array.isArray(editSignal.tpTargets)) {
           editSignal.tpTargets.forEach((tp: string, idx: number) => {
             if (idx < 4) {
               newTpEnabled[idx] = true;

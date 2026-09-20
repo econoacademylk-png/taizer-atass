@@ -267,7 +267,7 @@ export function AdminPanel() {
   const exportSignalsCSV = () => {
     const header = "Signal Number,Coin,Direction,Leverage,Entry Price,TP Targets,Stop Loss,Status,Date\n";
     const rows = signals.map(s => 
-      `${s.signalNumber},${s.coin},${s.direction},${s.leverage},${s.entryPrice},"${s.tpTargets.join('; ')}",${s.stopLoss},${s.status},${new Date(s.createdAt).toLocaleDateString()}`
+      `${s.signalNumber},${s.coin},${s.direction},${s.leverage},${s.entryPrice || 'Market'},"${Array.isArray(s.tpTargets) ? s.tpTargets.join('; ') : ''}",${s.stopLoss},${s.status},${new Date(s.createdAt).toLocaleDateString()}`
     ).join("\n");
     const blob = new Blob([header + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -814,25 +814,25 @@ export function AdminPanel() {
                 <div className="col-span-3 text-right">Performance Status</div>
               </div>
               <div className="p-4 flex flex-col gap-3">
-                {signals.map(s => (
+                {(Array.isArray(signals) ? signals : []).map(s => (
                   <div key={s._id} className="flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center bg-black/20 p-4 rounded-xl border border-yellow-500/10 hover:border-yellow-500/30 transition-colors relative">
                     <div className="md:col-span-1 font-bold text-yellow-400 text-lg md:text-base">
                       #{String(s.signalNumber).padStart(3, '0')}
                     </div>
                     <div className="md:col-span-2 text-xs text-slate-300 md:static md:block text-left">
-                      <div>{new Date(s.createdAt).toLocaleDateString()}</div>
-                      <div className="text-slate-500">{new Date(s.createdAt).toLocaleTimeString()}</div>
+                      <div>{s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleDateString() : 'N/A'}</div>
+                      <div className="text-slate-500">{s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleTimeString() : ''}</div>
                     </div>
                     <div className="md:col-span-2">
-                      <div className="font-bold text-white text-base md:text-sm">{s.coin}</div>
+                      <div className="font-bold text-white text-base md:text-sm">{s.coin || 'Unknown'}</div>
                       <div className={`text-xs font-bold ${s.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400'}`}>
                         {s.direction} {s.leverage}
                       </div>
                     </div>
                     <div className="md:col-span-4 text-xs text-slate-300 space-y-1 bg-black/30 md:bg-transparent p-3 md:p-0 rounded-lg">
                       <div><span className="text-slate-500">Entry:</span> {s.entryPrice || 'Market'}</div>
-                      <div><span className="text-slate-500">TP:</span> {(s.tpTargets || []).join(' • ')}</div>
-                      <div><span className="text-slate-500">SL:</span> <span className="text-rose-400">{s.stopLoss}</span></div>
+                      <div><span className="text-slate-500">TP:</span> {Array.isArray(s.tpTargets) ? s.tpTargets.join(' • ') : String(s.tpTargets || '')}</div>
+                      <div><span className="text-slate-500">SL:</span> <span className="text-rose-400">{s.stopLoss || 'None'}</span></div>
                     </div>
                     <div className="md:col-span-3 flex justify-start md:justify-end gap-2 items-center flex-wrap">
                       {s.status === 'Profit' ? (
