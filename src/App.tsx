@@ -178,7 +178,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/submit-payment" element={<SubmitPayment />} />
           <Route path="/ceo-login" element={<AdminLogin />} />
-          <Route path="/ceo" element={<AdminPanel />} />
+          <Route path="/ceo" element={<ErrorBoundary><AdminPanel /></ErrorBoundary>} />
           <Route path="/" element={<DashboardContent />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
