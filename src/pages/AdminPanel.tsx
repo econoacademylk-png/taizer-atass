@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Settings, User as UserIcon, CheckCircle, 
-  XCircle, Clock, ShieldAlert, LogOut, ArrowLeft, CreditCard, Activity, Power, Zap, Trash2, Menu, X
+  XCircle, Clock, ShieldAlert, LogOut, ArrowLeft, CreditCard, Activity, Power, Zap, Trash2, Menu, X, Edit2
 } from 'lucide-react';
 import { SignalFormModal } from '../components/SignalFormModal';
 import { API_BASE } from '../config/api';
