@@ -15,4 +15,4 @@ const WhatsAppSignalSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-export const WhatsAppSignal = mongoose.models.WhatsAppSignal || mongoose.model('WhatsAppSignal', WhatsAppSignalSchema);
+export const WhatsAppSignal = (mongoose.models.WhatsAppSignal || mongoose.model('WhatsAppSignal', WhatsAppSignalSchema)) as mongoose.Model<any>;
