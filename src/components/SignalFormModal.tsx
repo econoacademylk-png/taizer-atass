@@ -8,9 +8,10 @@ interface SignalFormModalProps {
   defaultCoin?: string;
   onSuccess?: () => void;
   nextSignalNumber?: number;
+  editSignal?: any;
 }
 
-export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClose, defaultCoin = 'BTC', onSuccess, nextSignalNumber }) => {
+export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClose, defaultCoin = 'BTC', onSuccess, nextSignalNumber, editSignal }) => {
   const [signalNumber, setSignalNumber] = useState<number>(1);
   const [direction, setDirection] = useState<'LONG' | 'SHORT'>('LONG');
   const [coin, setCoin] = useState<string>(defaultCoin);
@@ -30,12 +31,36 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
 
   useEffect(() => {
     if (isOpen) {
-      setCoin(defaultCoin.replace('USDT', ''));
-      if (nextSignalNumber !== undefined) {
-        setSignalNumber(nextSignalNumber);
+      if (editSignal) {
+        setSignalNumber(editSignal.signalNumber);
+        setDirection(editSignal.direction);
+        setCoin(editSignal.coin.replace('#', '').replace('/USDT', ''));
+        setLeverage(editSignal.leverage);
+        setEntryType(editSignal.entryType);
+        setEntryPrice(editSignal.entryPrice || '');
+        
+        const newTpEnabled = [false, false, false, false];
+        const newTpValues = ['', '', '', ''];
+        if (editSignal.tpTargets) {
+          editSignal.tpTargets.forEach((tp: string, idx: number) => {
+            if (idx < 4) {
+              newTpEnabled[idx] = true;
+              newTpValues[idx] = tp;
+            }
+          });
+        }
+        setTpEnabled(newTpEnabled);
+        setTpValues(newTpValues);
+        setStopLoss(editSignal.stopLoss || '');
+        setWalletUsage(editSignal.walletUsage || '10%');
+      } else {
+        setCoin(defaultCoin.replace('USDT', ''));
+        if (nextSignalNumber !== undefined) {
+          setSignalNumber(nextSignalNumber);
+        }
       }
     }
-  }, [isOpen, defaultCoin, nextSignalNumber]);
+  }, [isOpen, defaultCoin, nextSignalNumber, editSignal]);
 
   if (!isOpen) return null;
 
@@ -90,7 +115,7 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
         tpTargets: tpValues.filter((_, i) => tpEnabled[i] && tpValues[i]),
         stopLoss,
         walletUsage,
-        status: 'Pending'
+        status: editSignal ? editSignal.status : 'Pending'
       };
 
       await fetch(`${API_BASE}/api/admin/signals`, {
@@ -109,7 +134,9 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
   const handleCopy = async () => {
     navigator.clipboard.writeText(generateMessage());
     await saveSignalToDB();
-    handleNextSignal();
+    if (!editSignal) {
+      handleNextSignal();
+    }
     if (onSuccess) onSuccess();
   };
 
@@ -117,7 +144,9 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
     const text = encodeURIComponent(generateMessage());
     window.open(`https://wa.me/?text=${text}`, '_blank');
     await saveSignalToDB();
-    handleNextSignal();
+    if (!editSignal) {
+      handleNextSignal();
+    }
     if (onSuccess) onSuccess();
   };
 
@@ -397,7 +426,7 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
                 onClick={handleCopy}
                 className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black text-sm p-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-[0_0_20px_rgba(234,179,8,0.2)] cursor-pointer"
               >
-                <Zap size={18} className="fill-black" /> GENERATE SIGNAL
+                <Zap size={18} className="fill-black" /> {editSignal ? 'SAVE EDITED SIGNAL' : 'GENERATE SIGNAL'}
               </button>
               
               <div className="flex gap-3">
