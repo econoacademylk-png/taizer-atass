@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertTriangle, RefreshCcw } from 'lucide-react';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 interface State {
@@ -9,38 +10,40 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends React.Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null
   };
 
-  constructor(props: Props) {
-    super(props);
-  }
-
-  static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught error:', error, errorInfo);
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
   }
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 bg-red-900/50 border border-red-500 text-white rounded-xl w-full">
-          <h2 className="text-xl font-bold mb-4">UI Render Error</h2>
-          <p>Please take a screenshot of this error and send it to the developer:</p>
-          <pre className="mt-4 text-xs whitespace-pre-wrap font-mono bg-black/50 p-4 rounded text-red-200">
-            {this.state.error?.message}
-            {'\n\n'}
-            {this.state.error?.stack}
-          </pre>
+        <div className="flex flex-col items-center justify-center w-full h-full bg-[#07090b] text-red-500 font-sans p-8">
+          <AlertTriangle size={64} className="mb-4 text-red-500 opacity-80" />
+          <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+          <p className="text-sm text-red-400 opacity-80 max-w-lg text-center mb-6">
+            {this.state.error?.message || "An unexpected error occurred in the chart view."}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md transition-colors"
+          >
+            <RefreshCcw size={16} />
+            <span>Reload Application</span>
+          </button>
         </div>
       );
     }
+
     return (this as any).props.children;
   }
 }
