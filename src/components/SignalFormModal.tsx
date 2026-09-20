@@ -155,10 +155,10 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Content */}
-        <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto min-h-0 bg-[#0a0c10]">
+        <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto bg-[#0a0c10]">
           
           {/* LEFT PANEL: Trade Parameters */}
-          <div className="flex-1 p-6 border-r border-slate-800 lg:w-1/2 overflow-y-auto">
+          <div className="flex-none lg:flex-1 p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-slate-800 lg:w-1/2 lg:overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-widest">
                 <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
@@ -415,7 +415,7 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
           </div>
 
           {/* RIGHT PANEL: WhatsApp Output */}
-          <div className="flex-1 p-6 lg:w-1/2 flex flex-col h-[500px] lg:h-auto">
+          <div className="flex-none lg:flex-1 p-4 sm:p-6 lg:w-1/2 flex flex-col min-h-[500px] lg:h-auto lg:overflow-y-auto">
             <div className="flex items-center justify-between mb-4 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
