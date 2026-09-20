@@ -831,7 +831,7 @@ export function AdminPanel() {
                     </div>
                     <div className="md:col-span-4 text-xs text-slate-300 space-y-1 bg-black/30 md:bg-transparent p-3 md:p-0 rounded-lg">
                       <div><span className="text-slate-500">Entry:</span> {s.entryPrice || 'Market'}</div>
-                      <div><span className="text-slate-500">TP:</span> {s.tpTargets.join(' • ')}</div>
+                      <div><span className="text-slate-500">TP:</span> {(s.tpTargets || []).join(' • ')}</div>
                       <div><span className="text-slate-500">SL:</span> <span className="text-rose-400">{s.stopLoss}</span></div>
                     </div>
                     <div className="md:col-span-3 flex justify-start md:justify-end gap-2 items-center flex-wrap">
