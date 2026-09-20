@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Settings, User as UserIcon, CheckCircle, 
-  XCircle, Clock, ShieldAlert, LogOut, ArrowLeft, CreditCard, Activity, Power, Zap, Trash2
+  XCircle, Clock, ShieldAlert, LogOut, ArrowLeft, CreditCard, Activity, Power, Zap, Trash2, Menu, X
 } from 'lucide-react';
 import { SignalFormModal } from '../components/SignalFormModal';
 import { API_BASE } from '../config/api';
@@ -54,6 +54,13 @@ const INDICATOR_LIST = [
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+  };
+  
   const [profileForm, setProfileForm] = useState({ username: '', email: '', password: '' });
   const [profileStatus, setProfileStatus] = useState({ loading: false, error: '', success: '' });
   const [users, setUsers] = useState<any[]>([]);
@@ -390,12 +397,28 @@ export function AdminPanel() {
     });
 
   return (
-    <div className="flex h-screen bg-[#030712] text-slate-300 font-sans overflow-hidden relative">
+    <div className="flex flex-col md:flex-row h-screen bg-[#030712] text-slate-300 font-sans overflow-hidden relative">
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none" />
 
-      <aside className="w-72 bg-white/5 border-r border-white/10 backdrop-blur-xl flex flex-col relative z-10">
-        <div className="p-6 border-b border-white/5 flex items-center gap-3">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-[#030712]/90 backdrop-blur-md border-b border-white/10 z-50 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.4)]">
+            <ShieldAlert className="text-white w-5 h-5" />
+          </div>
+          <h2 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Tizer CEO</h2>
+        </div>
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 bg-white/5 rounded-lg border border-white/10 text-white"
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      <aside className={`fixed md:relative top-0 bottom-0 left-0 w-72 bg-[#030712] md:bg-white/5 border-r border-white/10 backdrop-blur-xl flex flex-col z-40 transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 h-full overflow-y-auto`}>
+        <div className="hidden md:flex p-6 border-b border-white/5 items-center gap-3 shrink-0">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)]">
             <ShieldAlert className="text-white w-6 h-6" />
           </div>
@@ -407,7 +430,7 @@ export function AdminPanel() {
 
         <nav className="flex-1 p-4 flex flex-col gap-2">
           <button 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => handleTabChange('dashboard')}
             className={`flex items-center gap-3 w-full p-3 rounded-lg transition-all duration-300 font-medium ${
               activeTab === 'dashboard' 
                 ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)]' 
@@ -419,7 +442,7 @@ export function AdminPanel() {
           </button>
           
           <button 
-            onClick={() => setActiveTab('users')}
+            onClick={() => handleTabChange('users')}
             className={`flex items-center justify-between w-full p-3 rounded-lg transition-all duration-300 font-medium ${
               activeTab === 'users' 
                 ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)]' 
@@ -439,7 +462,7 @@ export function AdminPanel() {
 
 
           <button 
-            onClick={() => setActiveTab('settings')}
+            onClick={() => handleTabChange('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${
               activeTab === 'settings' 
                 ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-400 border border-purple-500/30' 
@@ -449,7 +472,7 @@ export function AdminPanel() {
             <Settings size={20} className={activeTab === 'settings' ? 'text-purple-400' : ''} /> Global Settings
           </button>
           <button 
-            onClick={() => setActiveTab('profile')}
+            onClick={() => handleTabChange('profile')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${
               activeTab === 'profile' 
                 ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30' 
@@ -470,7 +493,7 @@ export function AdminPanel() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('signals')}
+            onClick={() => handleTabChange('signals')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold ${
               activeTab === 'signals' 
                 ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border border-yellow-500/30' 
@@ -498,8 +521,16 @@ export function AdminPanel() {
           </button>
         </div>
       </aside>
+      
+      {/* Overlay for mobile when sidebar is open */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-      <main className="flex-1 p-8 overflow-y-auto relative z-10">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto relative z-10 w-full">
         {error && (
           <div className="mb-6 text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-4 rounded-xl backdrop-blur-md flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -599,33 +630,33 @@ export function AdminPanel() {
                 <Clock size={20} /> Pending Approvals ({pendingUsers.length})
               </h2>
               <div className="bg-white/5 border border-orange-500/20 rounded-2xl backdrop-blur-xl flex flex-col overflow-hidden shadow-[0_0_15px_rgba(249,115,22,0.1)]">
-                <div className="p-4 border-b border-orange-500/20 bg-black/20 font-bold text-slate-400 text-sm grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-3">User Details</div>
-                  <div className="col-span-3">Contact Info</div>
-                  <div className="col-span-3 text-orange-300 flex items-center gap-2">
-                    Payment Details
+                <div className="p-4 border-b border-orange-500/20 bg-black/20 flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center">
+                  <div className="md:col-span-3 font-bold text-slate-400 text-sm hidden md:block">User Details</div>
+                  <div className="md:col-span-3 font-bold text-slate-400 text-sm hidden md:block">Contact Info</div>
+                  <div className="md:col-span-3 text-orange-300 flex items-center gap-2 font-bold text-sm">
+                    <span className="hidden md:inline">Payment Details</span>
                     <input 
                       type="text" 
-                      placeholder="Search..." 
+                      placeholder="Search pending..." 
                       value={pendingSearch}
                       onChange={(e) => setPendingSearch(e.target.value)}
-                      className="bg-black/40 border border-orange-500/30 rounded px-2 py-0.5 text-xs text-white outline-none focus:border-orange-500 w-24 font-normal"
+                      className="bg-black/40 border border-orange-500/30 rounded px-2 py-1.5 md:py-0.5 text-sm md:text-xs text-white outline-none focus:border-orange-500 w-full md:w-24 font-normal"
                     />
                   </div>
-                  <div className="col-span-3 text-right">Action</div>
+                  <div className="md:col-span-3 text-right font-bold text-slate-400 text-sm hidden md:block">Action</div>
                 </div>
                 <div className="p-4 flex flex-col gap-3">
                   {pendingUsers.map(u => (
-                    <div key={u._id} className="grid grid-cols-12 gap-4 items-center bg-black/20 p-4 rounded-xl border border-orange-500/10 hover:border-orange-500/30 transition-colors group">
-                      <div className="col-span-3">
+                    <div key={u._id} className="flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center bg-black/20 p-4 rounded-xl border border-orange-500/10 hover:border-orange-500/30 transition-colors group">
+                      <div className="md:col-span-3">
                         <div className="font-bold text-white group-hover:text-cyan-400 transition-colors">{u.firstName} {u.lastName}</div>
                         <div className="text-xs text-slate-500">@{u.username} • <span className="uppercase text-cyan-600 font-bold">{u.role}</span></div>
                       </div>
-                      <div className="col-span-3">
+                      <div className="md:col-span-3">
                         <div className="text-sm text-slate-300">{u.email}</div>
                         <div className="text-xs text-slate-500">{u.phone}</div>
                       </div>
-                      <div className="col-span-3 bg-orange-500/10 p-2 rounded-lg border border-orange-500/20">
+                      <div className="md:col-span-3 bg-orange-500/10 p-2 rounded-lg border border-orange-500/20">
                         <div className="text-xs text-orange-200 flex items-center gap-1 mb-1">
                           <CreditCard size={12} /> {u.paymentMethod || 'N/A'}
                           <span className="ml-auto text-[10px] bg-orange-500/20 px-1.5 py-0.5 rounded text-orange-300 font-bold border border-orange-500/20">
@@ -646,7 +677,7 @@ export function AdminPanel() {
                           </a>
                         )}
                       </div>
-                      <div className="col-span-3 flex justify-end gap-2 items-start">
+                      <div className="md:col-span-3 flex justify-start md:justify-end gap-2 items-center flex-wrap">
                         <button 
                           onClick={() => handleReject(u._id)}
                           className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5"
@@ -701,33 +732,41 @@ export function AdminPanel() {
                 <CheckCircle size={20} /> Registered Users ({approvedUsers.length})
               </h2>
               <div className="bg-white/5 border border-cyan-500/20 rounded-2xl backdrop-blur-xl flex flex-col overflow-hidden">
-                <div className="p-4 border-b border-cyan-500/20 bg-black/20 font-bold text-slate-400 text-sm grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-3">User Details</div>
-                  <div className="col-span-3">Contact Info</div>
-                  <div className="col-span-4 flex items-center gap-2">
-                    Membership
+                <div className="p-4 border-b border-cyan-500/20 bg-black/20 flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center">
+                  <div className="md:col-span-3 font-bold text-slate-400 text-sm hidden md:block">User Details</div>
+                  <div className="md:col-span-3 font-bold text-slate-400 text-sm hidden md:block">Contact Info</div>
+                  <div className="md:col-span-4 flex items-center gap-2 font-bold text-sm text-cyan-300">
+                    <span className="hidden md:inline">Membership</span>
                     <input 
                       type="text" 
-                      placeholder="Search..." 
+                      placeholder="Search users..." 
                       value={registeredSearch}
                       onChange={(e) => setRegisteredSearch(e.target.value)}
-                      className="bg-black/40 border border-cyan-500/30 rounded px-2 py-0.5 text-xs text-white outline-none focus:border-cyan-500 w-24 font-normal"
+                      className="bg-black/40 border border-cyan-500/30 rounded px-2 py-1.5 md:py-0.5 text-sm md:text-xs text-white outline-none focus:border-cyan-500 w-full md:w-24 font-normal"
                     />
                   </div>
-                  <div className="col-span-2 text-right">Status</div>
+                  <div className="md:col-span-2 text-right font-bold text-slate-400 text-sm hidden md:block">Status</div>
                 </div>
                 <div className="p-4 flex flex-col gap-3">
                   {approvedUsers.map(u => (
-                    <div key={u._id} className="grid grid-cols-12 gap-4 items-center bg-black/20 p-4 rounded-xl border border-cyan-500/10 hover:border-cyan-500/30 transition-colors group">
-                      <div className="col-span-3">
-                        <div className="font-bold text-white text-sm">{u.firstName} {u.lastName}</div>
-                        <div className="text-xs text-cyan-400">@{u.username}</div>
+                    <div key={u._id} className="flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center bg-black/20 p-4 rounded-xl border border-cyan-500/10 hover:border-cyan-500/30 transition-colors group">
+                      <div className="md:col-span-3 flex justify-between md:block">
+                        <div>
+                          <div className="font-bold text-white text-sm">{u.firstName} {u.lastName}</div>
+                          <div className="text-xs text-cyan-400">@{u.username}</div>
+                        </div>
+                        {/* Mobile status pill */}
+                        <div className="md:hidden">
+                          <span className="flex items-center gap-1.5 text-green-400 text-[10px] bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-lg">
+                            <CheckCircle size={12} /> Active
+                          </span>
+                        </div>
                       </div>
-                      <div className="col-span-3">
+                      <div className="md:col-span-3">
                         <div className="text-sm text-slate-300">{u.email}</div>
                         <div className="text-xs text-slate-500">{u.phone}</div>
                       </div>
-                      <div className="col-span-4 flex items-center gap-4">
+                      <div className="md:col-span-4 flex items-center gap-2 md:gap-4 flex-wrap">
                         <div className="bg-purple-500/10 text-purple-400 px-2 py-1 rounded text-xs font-bold border border-purple-500/20">
                           {u.selectedPackage || 'Standard'}
                         </div>
@@ -737,7 +776,7 @@ export function AdminPanel() {
                           </div>
                         )}
                       </div>
-                      <div className="col-span-2 flex justify-end">
+                      <div className="md:col-span-2 hidden md:flex justify-end">
                         <span className="flex items-center gap-1.5 text-green-400 text-sm bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg">
                           <CheckCircle size={16} /> Active
                         </span>
@@ -753,20 +792,20 @@ export function AdminPanel() {
 
         {activeTab === 'signals' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col h-full space-y-8">
-            <div className="flex justify-between items-center mb-2">
-              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
                 <Zap className="text-yellow-400" /> WhatsApp Signal History
               </h1>
               <button
                 onClick={exportSignalsCSV}
-                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors"
+                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors w-full md:w-auto"
               >
                 Export to CSV
               </button>
             </div>
             
             <div className="bg-white/5 border border-yellow-500/20 rounded-2xl backdrop-blur-xl flex flex-col overflow-hidden">
-              <div className="p-4 border-b border-yellow-500/20 bg-black/20 font-bold text-slate-400 text-sm grid grid-cols-12 gap-4 items-center">
+              <div className="p-4 border-b border-yellow-500/20 bg-black/20 font-bold text-slate-400 text-sm hidden md:grid md:grid-cols-12 gap-4 items-center">
                 <div className="col-span-1">#</div>
                 <div className="col-span-2">Date/Time</div>
                 <div className="col-span-2">Coin / Dir</div>
@@ -775,45 +814,45 @@ export function AdminPanel() {
               </div>
               <div className="p-4 flex flex-col gap-3">
                 {signals.map(s => (
-                  <div key={s._id} className="grid grid-cols-12 gap-4 items-center bg-black/20 p-4 rounded-xl border border-yellow-500/10 hover:border-yellow-500/30 transition-colors">
-                    <div className="col-span-1 font-bold text-yellow-400">
+                  <div key={s._id} className="flex flex-col md:grid md:grid-cols-12 gap-4 md:items-center bg-black/20 p-4 rounded-xl border border-yellow-500/10 hover:border-yellow-500/30 transition-colors relative">
+                    <div className="md:col-span-1 font-bold text-yellow-400 text-lg md:text-base">
                       #{String(s.signalNumber).padStart(3, '0')}
                     </div>
-                    <div className="col-span-2 text-xs text-slate-300">
+                    <div className="md:col-span-2 text-xs text-slate-300 absolute top-4 right-4 md:static md:block text-right md:text-left">
                       <div>{new Date(s.createdAt).toLocaleDateString()}</div>
                       <div className="text-slate-500">{new Date(s.createdAt).toLocaleTimeString()}</div>
                     </div>
-                    <div className="col-span-2">
-                      <div className="font-bold text-white text-sm">{s.coin}</div>
+                    <div className="md:col-span-2">
+                      <div className="font-bold text-white text-base md:text-sm">{s.coin}</div>
                       <div className={`text-xs font-bold ${s.direction === 'LONG' ? 'text-emerald-400' : 'text-red-400'}`}>
                         {s.direction} {s.leverage}
                       </div>
                     </div>
-                    <div className="col-span-4 text-xs text-slate-300 space-y-1">
+                    <div className="md:col-span-4 text-xs text-slate-300 space-y-1 bg-black/30 md:bg-transparent p-3 md:p-0 rounded-lg">
                       <div><span className="text-slate-500">Entry:</span> {s.entryPrice || 'Market'}</div>
                       <div><span className="text-slate-500">TP:</span> {s.tpTargets.join(' • ')}</div>
                       <div><span className="text-slate-500">SL:</span> <span className="text-rose-400">{s.stopLoss}</span></div>
                     </div>
-                    <div className="col-span-3 flex justify-end gap-2 items-center">
+                    <div className="md:col-span-3 flex justify-start md:justify-end gap-2 items-center flex-wrap">
                       {s.status === 'Profit' ? (
-                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
+                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 w-full md:w-auto justify-center">
                           <CheckCircle size={16} /> PROFIT
                         </span>
                       ) : s.status === 'Loss' ? (
-                        <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
+                        <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 w-full md:w-auto justify-center">
                           <XCircle size={16} /> LOSS
                         </span>
                       ) : (
                         <>
                           <button 
                             onClick={() => updateSignalStatus(s._id, 'Profit')}
-                            className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                            className="flex-1 md:flex-none bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex justify-center items-center gap-1.5 cursor-pointer"
                           >
                             <CheckCircle size={14} /> Profit
                           </button>
                           <button 
                             onClick={() => updateSignalStatus(s._id, 'Loss')}
-                            className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                            className="flex-1 md:flex-none bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-lg font-bold text-xs transition-all flex justify-center items-center gap-1.5 cursor-pointer"
                           >
                             <XCircle size={14} /> Loss
                           </button>
@@ -822,7 +861,7 @@ export function AdminPanel() {
                       
                       <button
                         onClick={() => deleteSignal(s._id)}
-                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ml-2"
+                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ml-2 absolute top-4 right-20 md:static md:ml-2"
                         title="Delete Signal"
                       >
                         <Trash2 size={16} />
