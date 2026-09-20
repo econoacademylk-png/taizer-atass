@@ -80,6 +80,7 @@ export function AdminPanel() {
   const [expiryDaysInput, setExpiryDaysInput] = useState<number>(30);
 
   const [isSignalFormOpen, setIsSignalFormOpen] = useState(false);
+  const [editingSignal, setEditingSignal] = useState<any>(null);
 
   const [pendingSearch, setPendingSearch] = useState('');
   const [registeredSearch, setRegisteredSearch] = useState('');
@@ -791,7 +792,7 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'signals' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col h-full space-y-8">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col min-h-full space-y-8">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-2">
               <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
                 <Zap className="text-yellow-400" /> WhatsApp Signal History
@@ -818,7 +819,7 @@ export function AdminPanel() {
                     <div className="md:col-span-1 font-bold text-yellow-400 text-lg md:text-base">
                       #{String(s.signalNumber).padStart(3, '0')}
                     </div>
-                    <div className="md:col-span-2 text-xs text-slate-300 absolute top-4 right-4 md:static md:block text-right md:text-left">
+                    <div className="md:col-span-2 text-xs text-slate-300 md:static md:block text-left">
                       <div>{new Date(s.createdAt).toLocaleDateString()}</div>
                       <div className="text-slate-500">{new Date(s.createdAt).toLocaleTimeString()}</div>
                     </div>
@@ -860,8 +861,19 @@ export function AdminPanel() {
                       )}
                       
                       <button
+                        onClick={() => {
+                          setEditingSignal(s);
+                          setIsSignalFormOpen(true);
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors cursor-pointer absolute top-4 right-12 md:static md:ml-2"
+                        title="Edit Signal"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      
+                      <button
                         onClick={() => deleteSignal(s._id)}
-                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ml-2 absolute top-4 right-20 md:static md:ml-2"
+                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ml-2 absolute top-4 right-4 md:static md:ml-0"
                         title="Delete Signal"
                       >
                         <Trash2 size={16} />
@@ -1063,10 +1075,15 @@ export function AdminPanel() {
 
       <SignalFormModal 
         isOpen={isSignalFormOpen} 
-        onClose={() => setIsSignalFormOpen(false)}
+        onClose={() => {
+          setIsSignalFormOpen(false);
+          setEditingSignal(null);
+        }}
         nextSignalNumber={signals.length > 0 ? Math.max(...signals.map(s => s.signalNumber || 0)) + 1 : 1}
+        editSignal={editingSignal}
         onSuccess={() => {
           setIsSignalFormOpen(false);
+          setEditingSignal(null);
           setActiveTab('signals');
           fetchSignals();
         }}
