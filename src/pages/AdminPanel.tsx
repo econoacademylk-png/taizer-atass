@@ -1064,6 +1064,7 @@ export function AdminPanel() {
       <SignalFormModal 
         isOpen={isSignalFormOpen} 
         onClose={() => setIsSignalFormOpen(false)}
+        nextSignalNumber={signals.length > 0 ? Math.max(...signals.map(s => s.signalNumber || 0)) + 1 : 1}
         onSuccess={() => {
           setIsSignalFormOpen(false);
           setActiveTab('signals');

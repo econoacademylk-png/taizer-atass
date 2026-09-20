@@ -7,9 +7,10 @@ interface SignalFormModalProps {
   onClose: () => void;
   defaultCoin?: string;
   onSuccess?: () => void;
+  nextSignalNumber?: number;
 }
 
-export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClose, defaultCoin = 'BTC', onSuccess }) => {
+export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClose, defaultCoin = 'BTC', onSuccess, nextSignalNumber }) => {
   const [signalNumber, setSignalNumber] = useState<number>(1);
   const [direction, setDirection] = useState<'LONG' | 'SHORT'>('LONG');
   const [coin, setCoin] = useState<string>(defaultCoin);
@@ -30,8 +31,11 @@ export const SignalFormModal: React.FC<SignalFormModalProps> = ({ isOpen, onClos
   useEffect(() => {
     if (isOpen) {
       setCoin(defaultCoin.replace('USDT', ''));
+      if (nextSignalNumber !== undefined) {
+        setSignalNumber(nextSignalNumber);
+      }
     }
-  }, [isOpen, defaultCoin]);
+  }, [isOpen, defaultCoin, nextSignalNumber]);
 
   if (!isOpen) return null;
 
