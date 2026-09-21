@@ -324,7 +324,7 @@ export const Header: React.FC = () => {
     { id: 'SMC', label: 'SMC', theme: 'blue' },
     { id: 'CRT', label: 'CRT', theme: 'pink' },
     { id: 'VWAP', label: 'VWAP', theme: 'steel' },
-    { id: 'SESS', label: 'SESS', theme: 'steel' },
+    { id: 'SESS', label: 'SESSION', theme: 'steel' },
     { id: 'VOL', label: 'VOL', theme: 'steel' },
     { id: 'D-OPEN', label: 'D-OPEN', theme: 'white' },
     { id: 'D-TPO', label: 'D-TPO', theme: 'purple' },

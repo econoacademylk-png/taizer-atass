@@ -1,0 +1,135 @@
+  // --- SMC SESSION HIGHS AND LOWS (SESS) OVERLAY ---
+  if (indicators.showSess && activeCandles.length > 0) {
+    if (activeTimeframe !== "1d" && activeTimeframe !== "1w" && activeTimeframe !== "1M") {
+      const nyFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        minute: "numeric",
+        hourCycle: "h23",
+      });
+
+      const getNY_HHMM = (timestamp: number) => {
+        const parts = nyFormatter.formatToParts(new Date(timestamp));
+        let h = 0; let m = 0;
+        for (const p of parts) {
+          if (p.type === "hour") h = parseInt(p.value, 10);
+          if (p.type === "minute") m = parseInt(p.value, 10);
+        }
+        if (h === 24) h = 0;
+        return h * 100 + m;
+      };
+
+      const inSessionWindow = (hhmm: number, start: number, end: number) => {
+        if (start > end) return hhmm >= start || hhmm < end;
+        return hhmm >= start && hhmm < end;
+      };
+
+      const sessionsToFind = [
+        { name: "Asian Range", start: 2000, end: 0, color: "rgba(117, 255, 121, 0.7)" },
+        { name: "London Open Killzone", start: 300, end: 500, color: "rgba(71, 171, 253, 0.7)" },
+        { name: "New York AM Killzone", start: 830, end: 1100, color: "rgba(255, 101, 101, 0.7)" },
+        { name: "London Close Killzone", start: 1000, end: 1200, color: "rgba(255, 159, 67, 0.7)" }
+      ];
+
+      const foundSessions: any[] = [];
+
+      for (const sess of sessionsToFind) {
+        let hi = -Infinity;
+        let lo = Infinity;
+        let startX = 0;
+        let inSession = false;
+        let sessionFound = false;
+
+        for (let i = activeCandles.length - 1; i >= 0; i--) {
+          const c = activeCandles[i];
+          const hhmm = getNY_HHMM(c.time);
+          const inside = inSessionWindow(hhmm, sess.start, sess.end);
+
+          if (inside) {
+            inSession = true;
+            if (c.high > hi) hi = c.high;
+            if (c.low < lo) lo = c.low;
+            startX = timeToX(c.time) - (vs.barWidth + vs.spacing) / 2;
+          } else {
+            if (inSession) {
+              sessionFound = true;
+              break;
+            }
+          }
+        }
+
+        if (sessionFound || inSession) {
+          foundSessions.push({ ...sess, hi, lo, startX });
+        }
+      }
+
+      foundSessions.forEach(sess => {
+        if (sess.hi === -Infinity || sess.lo === Infinity) return;
+
+        const hiY = priceToY(sess.hi);
+        const loY = priceToY(sess.lo);
+
+        ctx.save();
+        ctx.strokeStyle = sess.color;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        
+        ctx.beginPath();
+        ctx.moveTo(sess.startX, hiY);
+        ctx.lineTo(chartWidth, hiY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(sess.startX, loY);
+        ctx.lineTo(chartWidth, loY);
+        ctx.stroke();
+        
+        const drawLabel = (text: string, x: number, y: number, isHigh: boolean) => {
+           ctx.save();
+           ctx.font = '10px "Inter", sans-serif';
+           const metrics = ctx.measureText(text);
+           const paddingX = 6;
+           const h = 18;
+           const w = metrics.width + paddingX * 2;
+           const boxY = isHigh ? y - h - 6 : y + 6;
+           
+           ctx.fillStyle = "#0a0d10";
+           ctx.strokeStyle = sess.color;
+           ctx.lineWidth = 1;
+           
+           ctx.beginPath();
+           ctx.roundRect(x - w/2, boxY, w, h, 3);
+           ctx.fill();
+           ctx.stroke();
+
+           ctx.beginPath();
+           ctx.fillStyle = sess.color;
+           if (isHigh) {
+               ctx.moveTo(x - 4, boxY + h);
+               ctx.lineTo(x + 4, boxY + h);
+               ctx.lineTo(x, boxY + h + 6);
+           } else {
+               ctx.moveTo(x - 4, boxY);
+               ctx.lineTo(x + 4, boxY);
+               ctx.lineTo(x, boxY - 6);
+           }
+           ctx.closePath();
+           ctx.fill();
+
+           ctx.fillStyle = "#ffffff";
+           ctx.textBaseline = "middle";
+           ctx.textAlign = "center";
+           ctx.fillText(text, x, boxY + h/2 + 1);
+           ctx.restore();
+        };
+
+        // Draw labels slightly offset from start
+        const labelX = sess.startX + 60;
+        if (labelX > 0 && labelX < chartWidth) {
+           drawLabel(`${sess.name} High`, labelX, hiY, true);
+           drawLabel(`${sess.name} Low`, labelX, loY, false);
+        }
+        ctx.restore();
+      });
+    }
+  }

@@ -2585,177 +2585,143 @@ export const ChartContainer: React.FC = () => {
     });
   }
 
-  // --- SESSION PROFILE (SESS) OVERLAY ---
+  
+    // --- SMC SESSION HIGHS AND LOWS (SESS) OVERLAY ---
   if (indicators.showSess && activeCandles.length > 0) {
-    // Group candles into custom trading session blocks based on absolute UTC trading hours
-    const sessions: {
-      id: "ASIA" | "LONDON" | "NY";
-      dayStr: string;
-      candles: typeof activeCandles;
-    }[] = [];
-
-    let currentSession: {
-      id: "ASIA" | "LONDON" | "NY";
-      dayStr: string;
-      candles: typeof activeCandles;
-    } | null = null;
-
-    activeCandles.forEach((c) => {
-      const date = new Date(c.time);
-      const hour = date.getUTCHours();
-      const dayStr = date.toLocaleDateString("en-US", {
-        timeZone: "UTC",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+    if (activeTimeframe !== "1d" && activeTimeframe !== "1w" && activeTimeframe !== "1M") {
+      const nyFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        minute: "numeric",
+        hourCycle: "h23",
       });
 
-      let sId: "ASIA" | "LONDON" | "NY";
-      if (hour >= 0 && hour < 8) {
-        sId = "ASIA";
-      } else if (hour >= 8 && hour < 13) {
-        sId = "LONDON";
-      } else {
-        sId = "NY";
+      const getNY_HHMM = (timestamp: number) => {
+        const parts = nyFormatter.formatToParts(new Date(timestamp));
+        let h = 0; let m = 0;
+        for (const p of parts) {
+          if (p.type === "hour") h = parseInt(p.value, 10);
+          if (p.type === "minute") m = parseInt(p.value, 10);
+        }
+        if (h === 24) h = 0;
+        return h * 100 + m;
+      };
+
+      const inSessionWindow = (hhmm: number, start: number, end: number) => {
+        if (start > end) return hhmm >= start || hhmm < end;
+        return hhmm >= start && hhmm < end;
+      };
+
+      const sessionsToFind = [
+        { name: "Asian Range", start: 2000, end: 0, color: "rgba(117, 255, 121, 0.7)" },
+        { name: "London Open Killzone", start: 300, end: 500, color: "rgba(71, 171, 253, 0.7)" },
+        { name: "New York AM Killzone", start: 830, end: 1100, color: "rgba(255, 101, 101, 0.7)" },
+        { name: "London Close Killzone", start: 1000, end: 1200, color: "rgba(255, 159, 67, 0.7)" }
+      ];
+
+      const foundSessions: any[] = [];
+
+      for (const sess of sessionsToFind) {
+        let hi = -Infinity;
+        let lo = Infinity;
+        let startX = 0;
+        let inSession = false;
+        let sessionFound = false;
+
+        for (let i = activeCandles.length - 1; i >= 0; i--) {
+          const c = activeCandles[i];
+          const hhmm = getNY_HHMM(c.time);
+          const inside = inSessionWindow(hhmm, sess.start, sess.end);
+
+          if (inside) {
+            inSession = true;
+            if (c.high > hi) hi = c.high;
+            if (c.low < lo) lo = c.low;
+            startX = timeToX(c.time) - (vs.barWidth + vs.spacing) / 2;
+          } else {
+            if (inSession) {
+              sessionFound = true;
+              break;
+            }
+          }
+        }
+
+        if (sessionFound || inSession) {
+          foundSessions.push({ ...sess, hi, lo, startX });
+        }
       }
 
-      if (
-        !currentSession ||
-        currentSession.id !== sId ||
-        currentSession.dayStr !== dayStr
-      ) {
-        currentSession = {
-          id: sId,
-          dayStr,
-          candles: [],
+      foundSessions.forEach(sess => {
+        if (sess.hi === -Infinity || sess.lo === Infinity) return;
+
+        const hiY = priceToY(sess.hi);
+        const loY = priceToY(sess.lo);
+
+        ctx.save();
+        ctx.strokeStyle = sess.color;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        
+        ctx.beginPath();
+        ctx.moveTo(sess.startX, hiY);
+        ctx.lineTo(chartWidth, hiY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(sess.startX, loY);
+        ctx.lineTo(chartWidth, loY);
+        ctx.stroke();
+        
+        const drawLabel = (text: string, x: number, y: number, isHigh: boolean) => {
+           ctx.save();
+           ctx.font = '10px "Inter", sans-serif';
+           const metrics = ctx.measureText(text);
+           const paddingX = 6;
+           const h = 18;
+           const w = metrics.width + paddingX * 2;
+           const boxY = isHigh ? y - h - 6 : y + 6;
+           
+           ctx.fillStyle = "#0a0d10";
+           ctx.strokeStyle = sess.color;
+           ctx.lineWidth = 1;
+           
+           ctx.beginPath();
+           ctx.roundRect(x - w/2, boxY, w, h, 3);
+           ctx.fill();
+           ctx.stroke();
+
+           ctx.beginPath();
+           ctx.fillStyle = sess.color;
+           if (isHigh) {
+               ctx.moveTo(x - 4, boxY + h);
+               ctx.lineTo(x + 4, boxY + h);
+               ctx.lineTo(x, boxY + h + 6);
+           } else {
+               ctx.moveTo(x - 4, boxY);
+               ctx.lineTo(x + 4, boxY);
+               ctx.lineTo(x, boxY - 6);
+           }
+           ctx.closePath();
+           ctx.fill();
+
+           ctx.fillStyle = "#ffffff";
+           ctx.textBaseline = "middle";
+           ctx.textAlign = "center";
+           ctx.fillText(text, x, boxY + h/2 + 1);
+           ctx.restore();
         };
-        sessions.push(currentSession);
-      }
-      currentSession.candles.push(c);
-    });
 
-    sessions.forEach((session) => {
-      const sCandles = session.candles;
-      if (sCandles.length === 0) return;
-
-      const firstCandle = sCandles[0];
-      const lastCandle = sCandles[sCandles.length - 1];
-
-      // Horizontal boundaries of the session block on the chart
-      const startX = timeToX(firstCandle.time) - (vs.barWidth + vs.spacing) / 2;
-      const endX = timeToX(lastCandle.time) + (vs.barWidth + vs.spacing) / 2;
-
-      // Skip drawing if completely off-screen
-      if (startX > chartWidth || endX < 0) return;
-
-      // Visual configurations based on the Session Type
-      let sessionLabel = "ASIAN SESSION";
-      let titleColor = "#eab308"; // Amber/Yellow
-      let profileColor = "rgba(234, 179, 8, 0.18)"; // Gold/Yellow
-      let bgColor = "rgba(234, 179, 8, 0.02)";
-      let borderLineColor = "rgba(234, 179, 8, 0.15)";
-
-      if (session.id === "LONDON") {
-        sessionLabel = "LONDON SESSION";
-        titleColor = "#3b82f6"; // Royal Blue
-        profileColor = "rgba(59, 130, 246, 0.22)";
-        bgColor = "rgba(59, 130, 246, 0.02)";
-        borderLineColor = "rgba(59, 130, 246, 0.15)";
-      } else if (session.id === "NY") {
-        sessionLabel = "NEW YORK SESSION";
-        titleColor = "#ec4899"; // Pink/Magenta
-        profileColor = "rgba(236, 72, 153, 0.22)";
-        bgColor = "rgba(236, 72, 153, 0.02)";
-        borderLineColor = "rgba(236, 72, 153, 0.15)";
-      }
-
-      // 1. Draw Shaded Session Background Block
-      ctx.save();
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(startX, 0, endX - startX, chartHeight);
-      ctx.restore();
-
-      // 2. Draw vertical dotted/dashed boundary separator
-      ctx.save();
-      ctx.strokeStyle = borderLineColor;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(startX, 0);
-      ctx.lineTo(startX, chartHeight);
-      ctx.stroke();
-      ctx.restore();
-
-      // 3. Draw Session Label text at the top
-      ctx.save();
-      ctx.fillStyle = titleColor;
-      ctx.font = 'bold 10px "Inter", sans-serif';
-      ctx.textAlign = "left";
-      ctx.fillText(sessionLabel, startX + 12, 45);
-      ctx.restore();
-
-      // 4. Calculate and Draw the Session Volume Profile
-      let sMinPrice = Infinity;
-      let sMaxPrice = -Infinity;
-      sCandles.forEach((c) => {
-        if (c.low < sMinPrice) sMinPrice = c.low;
-        if (c.high > sMaxPrice) sMaxPrice = c.high;
-      });
-
-      if (sMinPrice >= sMaxPrice) return;
-
-      const bucketCount = 35;
-      const priceRange = sMaxPrice - sMinPrice;
-      const bucketStep = priceRange / bucketCount;
-
-      const buckets: { price: number; volume: number }[] = [];
-      for (let i = 0; i < bucketCount; i++) {
-        const price = sMinPrice + i * bucketStep + bucketStep / 2;
-        buckets.push({ price, volume: 0 });
-      }
-
-      // Distribute candle volumes over the buckets
-      sCandles.forEach((c) => {
-        const cHigh = c.high;
-        const cLow = c.low;
-        const cVol = c.volume || 0;
-
-        const overlappingBuckets: typeof buckets = [];
-        buckets.forEach((b) => {
-          const bMin = b.price - bucketStep / 2;
-          const bMax = b.price + bucketStep / 2;
-          if (bMax >= cLow && bMin <= cHigh) {
-            overlappingBuckets.push(b);
-          }
-        });
-
-        if (overlappingBuckets.length > 0) {
-          const volPerBucket = cVol / overlappingBuckets.length;
-          overlappingBuckets.forEach((b) => {
-            b.volume += volPerBucket;
-          });
+        // Draw labels slightly offset from start
+        const labelX = sess.startX + 60;
+        if (labelX > 0 && labelX < chartWidth) {
+           drawLabel(`${sess.name} High`, labelX, hiY, true);
+           drawLabel(`${sess.name} Low`, labelX, loY, false);
         }
+        ctx.restore();
       });
-
-      const maxBucketVol = Math.max(...buckets.map((b) => b.volume), 1);
-      const dayWidth = endX - startX;
-      const maxBarWidth = Math.min(130, dayWidth * 0.45);
-
-      ctx.save();
-      ctx.fillStyle = profileColor;
-      buckets.forEach((b) => {
-        const y = priceToY(b.price);
-        const barHeight = Math.max(1.2, chartHeight / bucketCount - 0.6);
-        if (y >= 0 && y <= chartHeight) {
-          const barWidth = (b.volume / maxBucketVol) * maxBarWidth;
-          if (barWidth > 0) {
-            ctx.fillRect(startX, y - barHeight / 2, barWidth, barHeight);
-          }
-        }
-      });
-      ctx.restore();
-    });
+    }
   }
+
 
   // --- CANDLE RANGE THEORY (CRT) OVERLAY ---
   if (indicators.showCRT && activeCandles.length > 0) {
@@ -8617,3 +8583,4 @@ const yToPrice = (y: number): number => {
     </div>
   );
 };
+
