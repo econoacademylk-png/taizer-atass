@@ -330,19 +330,14 @@ export const Header: React.FC = () => {
     { id: 'D-TPO', label: 'D-TPO', theme: 'purple' },
     { id: 'D-VOL', label: 'D-VOL', theme: 'blue' },
     { id: 'N-POC', label: 'N-POC', theme: 'orange' },
-    { id: 'CVD', label: 'CVD', theme: 'yellow' },
     { id: 'ABS', label: 'ABS', theme: 'yellow' },
     { id: 'HV-BUY', label: 'HV-BUY', theme: 'cyan' },
     { id: 'HV-SELL', label: 'HV-SELL', theme: 'pink' },
     { id: 'PIVOT', label: 'PIVOT', theme: 'purple' },
     { id: 'AVWAP', label: 'MPAS', theme: 'blue' },
     { id: 'SPOOF', label: 'SPOOF', theme: 'orange' },
-    { id: 'OI', label: 'OI', theme: 'cyan' },
-    { id: 'OIT', label: 'OIT', theme: 'green' },
     { id: 'OI-WALL', label: '🔥 OI-WALL', theme: 'orange' },
-    { id: 'LVN', label: 'LVN', theme: 'cyan' },
-    { id: 'MTF', label: 'MTF', theme: 'orange' },
-    { id: 'FP SHAPE', label: 'FP SHAPE', theme: 'purple' }
+    { id: 'MTF', label: 'MTF', theme: 'orange' }
   ];
 
   // Customizable threshold controls rendered in Row 3
