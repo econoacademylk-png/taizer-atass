@@ -134,6 +134,8 @@ export const ChartContainer: React.FC = () => {
     setGlobalNews,
     liquidations,
     icebergs,
+    stampText,
+    setStampText
   } = useTrading();
 
   // --- FETCH NEWS ---
@@ -7763,7 +7765,7 @@ const yToPrice = (y: number): number => {
           points: [newPoint],
           color: "#FFE100",
           isLocked: false,
-          text: activeDrawingTool === "price-tag" ? clickPrice.toFixed(2) : "Text",
+          text: activeDrawingTool === "price-tag" ? clickPrice.toFixed(2) : (activeDrawingTool === "text-box" && stampText ? stampText : "Text"),
           textSize: 14,
         };
         setDrawings((prev) => [...prev, newDrawing]);

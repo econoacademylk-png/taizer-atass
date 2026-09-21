@@ -51,6 +51,8 @@ interface TradingContextProps {
   // Tools & Drawing State
   activeDrawingTool: DrawingType;
   setActiveDrawingTool: (tool: DrawingType) => void;
+  stampText: string | null;
+  setStampText: (text: string | null) => void;
   drawings: Drawing[];
   setDrawings: (drawings: Drawing[] | ((prev: Drawing[]) => Drawing[])) => void;
   selectedDrawingId: string | null;
@@ -216,6 +218,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [error, setError] = useState<string | null>(null);
 
   const [activeDrawingTool, setActiveDrawingTool] = useState<DrawingType>('cursor');
+  const [stampText, setStampText] = useState<string | null>(null);
   const [drawings, setDrawingsState] = useState<Drawing[]>(() => {
     try {
       const userStr = localStorage.getItem('user');
@@ -1160,6 +1163,8 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setError,
         activeDrawingTool,
         setActiveDrawingTool,
+        stampText,
+        setStampText,
         drawings,
         setDrawings,
         selectedDrawingId,

@@ -494,7 +494,18 @@ app.use('/api', async (req, res, next) => {
     }
   });
 
-  
-
-
-
+  // Local Dev Server start
+  if (process.env.NODE_ENV !== 'production') {
+    async function startDevServer() {
+      const PORT = process.env.PORT || 5000;
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+      app.listen(PORT as number, "0.0.0.0", () => {
+        console.log(`Local dev server running on http://localhost:${PORT}`);
+      });
+    }
+    startDevServer();
+  }
