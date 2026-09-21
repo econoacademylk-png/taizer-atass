@@ -168,6 +168,7 @@ const DEFAULT_INDICATORS: IndicatorConfig = {
   showDVol: false,
   showDOpen: true,
   showSess: false,
+    showSession: false,
   showCRT: false,
   showEW: false,
   showSK: false,

@@ -2587,7 +2587,7 @@ export const ChartContainer: React.FC = () => {
 
   
     // --- SMC SESSION HIGHS AND LOWS (SESS) OVERLAY ---
-  if (indicators.showSess && activeCandles.length > 0) {
+  if (indicators.showSession && activeCandles.length > 0) {
     if (activeTimeframe !== "1d" && activeTimeframe !== "1w" && activeTimeframe !== "1M") {
       const nyFormatter = new Intl.DateTimeFormat("en-US", {
         timeZone: "America/New_York",
@@ -2722,6 +2722,181 @@ export const ChartContainer: React.FC = () => {
     }
   }
 
+
+  
+// --- SESSION PROFILE (SESS) OVERLAY ---
+  if (indicators.showSess && activeCandles.length > 0) {
+    // Group candles into custom trading session blocks based on absolute UTC trading hours
+    const sessions: {
+      id: "ASIA" | "LONDON" | "NY";
+      dayStr: string;
+      candles: typeof activeCandles;
+    }[] = [];
+
+    let currentSession: {
+      id: "ASIA" | "LONDON" | "NY";
+      dayStr: string;
+      candles: typeof activeCandles;
+    } | null = null;
+
+    activeCandles.forEach((c) => {
+      const date = new Date(c.time);
+      const hour = date.getUTCHours();
+      const dayStr = date.toLocaleDateString("en-US", {
+        timeZone: "UTC",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+
+      let sId: "ASIA" | "LONDON" | "NY";
+      if (hour >= 0 && hour < 8) {
+        sId = "ASIA";
+      } else if (hour >= 8 && hour < 13) {
+        sId = "LONDON";
+      } else {
+        sId = "NY";
+      }
+
+      if (
+        !currentSession ||
+        currentSession.id !== sId ||
+        currentSession.dayStr !== dayStr
+      ) {
+        currentSession = {
+          id: sId,
+          dayStr,
+          candles: [],
+        };
+        sessions.push(currentSession);
+      }
+      currentSession.candles.push(c);
+    });
+
+    sessions.forEach((session) => {
+      const sCandles = session.candles;
+      if (sCandles.length === 0) return;
+
+      const firstCandle = sCandles[0];
+      const lastCandle = sCandles[sCandles.length - 1];
+
+      // Horizontal boundaries of the session block on the chart
+      const startX = timeToX(firstCandle.time) - (vs.barWidth + vs.spacing) / 2;
+      const endX = timeToX(lastCandle.time) + (vs.barWidth + vs.spacing) / 2;
+
+      // Skip drawing if completely off-screen
+      if (startX > chartWidth || endX < 0) return;
+
+      // Visual configurations based on the Session Type
+      let sessionLabel = "ASIAN SESSION";
+      let titleColor = "#eab308"; // Amber/Yellow
+      let profileColor = "rgba(234, 179, 8, 0.18)"; // Gold/Yellow
+      let bgColor = "rgba(234, 179, 8, 0.02)";
+      let borderLineColor = "rgba(234, 179, 8, 0.15)";
+
+      if (session.id === "LONDON") {
+        sessionLabel = "LONDON SESSION";
+        titleColor = "#3b82f6"; // Royal Blue
+        profileColor = "rgba(59, 130, 246, 0.22)";
+        bgColor = "rgba(59, 130, 246, 0.02)";
+        borderLineColor = "rgba(59, 130, 246, 0.15)";
+      } else if (session.id === "NY") {
+        sessionLabel = "NEW YORK SESSION";
+        titleColor = "#ec4899"; // Pink/Magenta
+        profileColor = "rgba(236, 72, 153, 0.22)";
+        bgColor = "rgba(236, 72, 153, 0.02)";
+        borderLineColor = "rgba(236, 72, 153, 0.15)";
+      }
+
+      // 1. Draw Shaded Session Background Block
+      ctx.save();
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(startX, 0, endX - startX, chartHeight);
+      ctx.restore();
+
+      // 2. Draw vertical dotted/dashed boundary separator
+      ctx.save();
+      ctx.strokeStyle = borderLineColor;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(startX, 0);
+      ctx.lineTo(startX, chartHeight);
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. Draw Session Label text at the top
+      ctx.save();
+      ctx.fillStyle = titleColor;
+      ctx.font = 'bold 10px "Inter", sans-serif';
+      ctx.textAlign = "left";
+      ctx.fillText(sessionLabel, startX + 12, 45);
+      ctx.restore();
+
+      // 4. Calculate and Draw the Session Volume Profile
+      let sMinPrice = Infinity;
+      let sMaxPrice = -Infinity;
+      sCandles.forEach((c) => {
+        if (c.low < sMinPrice) sMinPrice = c.low;
+        if (c.high > sMaxPrice) sMaxPrice = c.high;
+      });
+
+      if (sMinPrice >= sMaxPrice) return;
+
+      const bucketCount = 35;
+      const priceRange = sMaxPrice - sMinPrice;
+      const bucketStep = priceRange / bucketCount;
+
+      const buckets: { price: number; volume: number }[] = [];
+      for (let i = 0; i < bucketCount; i++) {
+        const price = sMinPrice + i * bucketStep + bucketStep / 2;
+        buckets.push({ price, volume: 0 });
+      }
+
+      // Distribute candle volumes over the buckets
+      sCandles.forEach((c) => {
+        const cHigh = c.high;
+        const cLow = c.low;
+        const cVol = c.volume || 0;
+
+        const overlappingBuckets: typeof buckets = [];
+        buckets.forEach((b) => {
+          const bMin = b.price - bucketStep / 2;
+          const bMax = b.price + bucketStep / 2;
+          if (bMax >= cLow && bMin <= cHigh) {
+            overlappingBuckets.push(b);
+          }
+        });
+
+        if (overlappingBuckets.length > 0) {
+          const volPerBucket = cVol / overlappingBuckets.length;
+          overlappingBuckets.forEach((b) => {
+            b.volume += volPerBucket;
+          });
+        }
+      });
+
+      const maxBucketVol = Math.max(...buckets.map((b) => b.volume), 1);
+      const dayWidth = endX - startX;
+      const maxBarWidth = Math.min(130, dayWidth * 0.45);
+
+      ctx.save();
+      ctx.fillStyle = profileColor;
+      buckets.forEach((b) => {
+        const y = priceToY(b.price);
+        const barHeight = Math.max(1.2, chartHeight / bucketCount - 0.6);
+        if (y >= 0 && y <= chartHeight) {
+          const barWidth = (b.volume / maxBucketVol) * maxBarWidth;
+          if (barWidth > 0) {
+            ctx.fillRect(startX, y - barHeight / 2, barWidth, barHeight);
+          }
+        }
+      });
+      ctx.restore();
+    });
+  }
+
+  
 
   // --- CANDLE RANGE THEORY (CRT) OVERLAY ---
   if (indicators.showCRT && activeCandles.length > 0) {
@@ -8583,4 +8758,6 @@ const yToPrice = (y: number): number => {
     </div>
   );
 };
+
+
 

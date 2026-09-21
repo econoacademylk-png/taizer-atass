@@ -90,6 +90,7 @@ export const Header: React.FC = () => {
       'WYC': false,
       'CRT': false,
       'SESS': false,
+        'SESSION': false,
       'VOL': true,
       'D-OPEN': true,
       'D-VOL': false,
@@ -324,7 +325,8 @@ export const Header: React.FC = () => {
     { id: 'SMC', label: 'SMC', theme: 'blue' },
     { id: 'CRT', label: 'CRT', theme: 'pink' },
     { id: 'VWAP', label: 'VWAP', theme: 'steel' },
-    { id: 'SESS', label: 'SESSION', theme: 'steel' },
+    { id: 'SESS', label: 'SESS', theme: 'steel' },
+      { id: 'SESSION', label: 'SESSION', theme: 'steel' },
     { id: 'VOL', label: 'VOL', theme: 'steel' },
     { id: 'D-OPEN', label: 'D-OPEN', theme: 'white' },
     { id: 'D-TPO', label: 'D-TPO', theme: 'purple' },
@@ -384,6 +386,7 @@ export const Header: React.FC = () => {
     if (id === 'D-VOL') return !!indicators.showDVol;
     if (id === 'D-OPEN') return !!indicators.showDOpen;
     if (id === 'SESS') return !!indicators.showSess;
+    if (id === 'SESSION') return !!indicators.showSession;
     if (id === 'CRT') return !!indicators.showCRT;
     if (id === 'EW') return !!indicators.showEW;
     if (id === 'SK') return !!indicators.showSK;
@@ -444,6 +447,7 @@ export const Header: React.FC = () => {
         'D-VOL': 'showDVol',
         'D-OPEN': 'showDOpen',
         'SESS': 'showSess',
+          'SESSION': 'showSession',
         'CRT': 'showCRT',
         'EW': 'showEW',
         'SK': 'showSK',
@@ -564,7 +568,9 @@ export const Header: React.FC = () => {
     } else if (id === 'D-OPEN') {
       setIndicators({ showDOpen: nextActive });
     } else if (id === 'SESS') {
-      setIndicators({ showSess: nextActive });
+        setIndicators({ showSess: nextActive });
+      } else if (id === 'SESSION') {
+        setIndicators({ showSession: nextActive });
     } else if (id === 'CRT') {
       setIndicators({ showCRT: nextActive });
     } else if (id === 'EW') {
@@ -1417,4 +1423,5 @@ export const Header: React.FC = () => {
     </div>
   );
 };
+
 

@@ -104,6 +104,7 @@ export interface IndicatorConfig {
   showDVol?: boolean;
   showDOpen?: boolean;
   showSess?: boolean;
+  showSession?: boolean;
   showCRT?: boolean;
   showEW?: boolean;
   showSK?: boolean;
