@@ -336,7 +336,6 @@ export const Header: React.FC = () => {
     { id: 'PIVOT', label: 'PIVOT', theme: 'purple' },
     { id: 'AVWAP', label: 'MPAS', theme: 'blue' },
     { id: 'SPOOF', label: 'SPOOF', theme: 'orange' },
-    { id: 'OI-WALL', label: '🔥 OI-WALL', theme: 'orange' },
     { id: 'MTF', label: 'MTF', theme: 'orange' }
   ];
 
