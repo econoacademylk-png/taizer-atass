@@ -294,8 +294,6 @@ export const Header: React.FC = () => {
 
   // Row 1 Buttons Array
   const row1Buttons = [
-    { id: 'IMB', label: 'IMB', theme: 'steel' },
-    { id: 'STK', label: 'STK', theme: 'steel' },
     { id: 'RSI', label: 'RSI', theme: 'steel' },
     { id: 'DELTA', label: 'DELTA', theme: 'steel' },
     { id: 'D-DELTA', label: 'D-DELTA', theme: 'steel' },
@@ -309,10 +307,7 @@ export const Header: React.FC = () => {
     { id: 'MMS', label: 'MMS', theme: 'purple' },
     { id: 'NEWS', label: 'NEWS', theme: 'blue' },
     { id: 'LIQ-POOL', label: 'LIQ-POOL', theme: 'pink' },
-    { id: 'ICEBERG', label: 'ICEBERG', theme: 'cyan' },
     { id: 'PACE', label: 'PACE', theme: 'orange' },
-    { id: 'WICK-Δ', label: 'WICK-Δ', theme: 'crimson' },
-    { id: 'REKT', label: '☠️ REKT', theme: 'orange-red' },
     { id: 'FVG', label: 'FVG', theme: 'rose' }
   ];
 
