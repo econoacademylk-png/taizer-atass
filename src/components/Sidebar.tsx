@@ -64,38 +64,18 @@ export const Sidebar: React.FC = () => {
   }, []);
 
   const TEXT_STAMPS = [
-    "Market Structure",
-    "HH / HL",
-    "LH / LL",
-    "Bullish / Bearish structure",
-    "BOS",
-    "CHOCH",
+    "Asia High",
+    "Asia Low",
+    "London",
+    "NY",
     "Liquidity",
-    "Buy-side liquidity (BSL)",
-    "Sell-side liquidity (SSL)",
-    "Previous Day High / Low",
-    "Previous Week High / Low",
-    "Asia High / Low",
-    "Equal Highs / Equal Lows",
-    "Internal / External Liquidity",
-    "Liquidity sweep / grab",
-    "Three Major Sessions",
-    "Asia Session",
-    "London Session",
-    "New York Session",
-    "Session overlap",
-    "Session High/Low mark කරන විදිහ",
-    "London liquidity raid",
-    "NY reversal / continuation scenarios",
-    "ICT Concepts",
+    "Sweep",
+    "CHOCH",
+    "BOS",
     "FVG",
-    "Order Block",
-    "Breaker Block",
-    "Mitigation",
-    "Displacement",
-    "Inducement",
-    "Premium / Discount",
-    "Dealing Range"
+    "Entry",
+    "SL",
+    "TP"
   ];
 
   const drawingTools: { type: DrawingType; icon: React.ReactNode; label: string }[] = [
