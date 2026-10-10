@@ -26,7 +26,7 @@ export interface Candle {
 export type ChartType = 'candlestick' | 'heikin-ashi' | 'line' | 'area' | 'bars' | 'footprint' | 'volume-candle' | 'delta-candle';
 
 export type DrawingType = 'cursor' | 'trendline' | 'horizontal' | 'rectangle' | 'long' | 'short' | 'measure' 
-  | 'fib-retracement' | 'fib-extension' | 'price-tag' | 'text-box' | 'path' | 'circle' | 'triangle' | 'arrow' | 'callout' | 'arc';
+  | 'fib-retracement' | 'fib-extension' | '0abc' | 'price-tag' | 'text-box' | 'path' | 'circle' | 'triangle' | 'arrow' | 'callout' | 'arc';
 
 export interface DrawingPoint {
   time: number;

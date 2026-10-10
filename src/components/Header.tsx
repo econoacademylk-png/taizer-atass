@@ -6,10 +6,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTrading } from '../stores/useTradingStore';
 import { ChartType } from '../types/chart';
-import { Search, ChevronDown, Check, X, Star, Trash2, Plus, Zap } from 'lucide-react';
+import { Search, ChevronDown, Check, X, Star, Trash2, Plus, Zap, Volume2, VolumeX, Edit3 } from 'lucide-react';
 import { FAEngineModal } from './FAEngineModal';
-import { useLEZStore } from '../stores/useLEZStore';
+import { useLEZStore, setLEZState } from '../stores/useLEZStore';
 import { LEZSignalsModal } from './LEZSignalsModal';
+import { NotesModal } from './NotesModal';
+
 
 const highlightMatch = (text: string, query: string) => {
   if (!query) return <span className="font-mono tracking-wider font-bold">{text}</span>;
@@ -28,6 +30,57 @@ const highlightMatch = (text: string, query: string) => {
     </span>
   );
 };
+
+
+
+  // Row 1 Buttons Array
+  const DEFAULT_ROW1 = [
+    { id: 'RSI', label: 'RSI', theme: 'steel' },
+    { id: 'DELTA', label: 'DELTA', theme: 'steel' },
+    { id: 'D-DELTA', label: 'D-DELTA', theme: 'steel' },
+    { id: 'DELTA-V', label: 'DELTA-V', theme: 'steel' },
+    { id: 'WHALE', label: 'WHALE', theme: 'steel' },
+    { id: 'EMA', label: 'EMA', theme: 'purple' },
+    { id: 'LEZ', label: 'LEZ', theme: 'cyan' },
+    { id: 'VPT', label: 'VPT', theme: 'orange' },
+    { id: 'DOM-LIQ', label: 'DOM-LIQ', theme: 'cyan' },
+    { id: 'DOM-PROF', label: 'DOM-PROF', theme: 'green' },
+    { id: 'MMS', label: 'MMS', theme: 'purple' },
+    { id: 'NEWS', label: 'NEWS', theme: 'blue' },
+    { id: 'LIQ-POOL', label: 'LIQ-POOL', theme: 'pink' },
+    { id: 'PACE', label: 'PACE', theme: 'orange' },
+    { id: 'FVG', label: 'FVG', theme: 'rose' }
+  ];
+
+
+  // Row 2 Buttons Array
+  const DEFAULT_ROW2 = [
+    { id: 'VWBA', label: 'OBScan', theme: 'green' },
+    { id: 'TWB', label: 'TWB', theme: 'steel' },
+    { id: 'FOOT', label: 'FOOT', theme: 'steel' },
+    { id: 'STATS', label: 'STATS', theme: 'steel' },
+    { id: 'LIQ-V', label: 'LIQ-V', theme: 'cyan' },
+    { id: 'SK', label: 'SK', theme: 'orange' },
+    { id: 'EW', label: 'EW', theme: 'pink' },
+    { id: 'WYC', label: 'WYC', theme: 'purple' },
+    { id: 'SMC', label: 'SMC', theme: 'blue' },
+    { id: 'CRT', label: 'CRT', theme: 'pink' },
+    { id: 'VWAP', label: 'VWAP', theme: 'steel' },
+    { id: 'SESS', label: 'SESS', theme: 'steel' },
+      { id: 'SESSION', label: 'SESSION', theme: 'steel' },
+    { id: 'VOL', label: 'VOL', theme: 'steel' },
+    { id: 'D-OPEN', label: 'D-OPEN', theme: 'white' },
+    { id: 'D-TPO', label: 'D-TPO', theme: 'purple' },
+    { id: 'D-VOL', label: 'D-VOL', theme: 'blue' },
+    { id: 'N-POC', label: 'N-POC', theme: 'orange' },
+    { id: 'ABS', label: 'ABS', theme: 'yellow' },
+    { id: 'HV-BUY', label: 'HV-BUY', theme: 'cyan' },
+    { id: 'HV-SELL', label: 'HV-SELL', theme: 'pink' },
+    { id: 'PIVOT', label: 'PIVOT', theme: 'purple' },
+    { id: 'AVWAP', label: 'MPAS', theme: 'blue' },
+    { id: 'SPOOF', label: 'SPOOF', theme: 'orange' },
+    { id: 'MTF', label: 'MTF', theme: 'orange' }
+  ];
 
 export const Header: React.FC = () => {
   const {
@@ -130,12 +183,121 @@ export const Header: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+
   const [focusedIndex, setFocusedIndex] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // --- FAVORITE COINS SYSTEM ---
+  
+  const [row1Buttons, setRow1Buttons] = useState(() => {
+    try {
+      const saved1 = localStorage.getItem('header_row1');
+      const saved2 = localStorage.getItem('header_row2');
+      if (saved1) {
+        let parsed1 = JSON.parse(saved1);
+        let parsed2 = saved2 ? JSON.parse(saved2) : [];
+        
+        // Deduplicate: if an item is in both, keep it in the row where it was originally saved.
+        // Actually, the simplest is to just remove duplicates from parsed1 that are also in parsed2? No, we don't know which is newer.
+        // But for initializing, we just want to ensure we don't duplicate.
+        
+        // First, let's filter parsed1 to remove any duplicates that might have happened.
+        // We'll keep a set of seen IDs.
+        const seen = new Set();
+        parsed1 = parsed1.filter((p: any) => {
+            if (seen.has(p.id)) return false;
+            seen.add(p.id);
+            return true;
+        });
+
+        const existingIds = new Set([...parsed1.map((p: any) => p.id), ...parsed2.map((p: any) => p.id)]);
+        const missing = DEFAULT_ROW1.filter(b => !existingIds.has(b.id));
+        return [...parsed1, ...missing];
+      }
+    } catch {}
+    return DEFAULT_ROW1;
+  });
+
+  const [row2Buttons, setRow2Buttons] = useState(() => {
+    try {
+      const saved1 = localStorage.getItem('header_row1');
+      const saved2 = localStorage.getItem('header_row2');
+      if (saved2) {
+        let parsed1 = saved1 ? JSON.parse(saved1) : [];
+        let parsed2 = JSON.parse(saved2);
+        
+        // Remove duplicates within parsed2, and also if they are in parsed1
+        const seen = new Set(parsed1.map((p: any) => p.id));
+        parsed2 = parsed2.filter((p: any) => {
+            if (seen.has(p.id)) return false;
+            seen.add(p.id);
+            return true;
+        });
+
+        const existingIds = new Set([...parsed1.map((p: any) => p.id), ...parsed2.map((p: any) => p.id)]);
+        const missing = DEFAULT_ROW2.filter(b => !existingIds.has(b.id));
+        return [...parsed2, ...missing];
+      }
+    } catch {}
+    return DEFAULT_ROW2;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('header_row1', JSON.stringify(row1Buttons));
+  }, [row1Buttons]);
+
+  useEffect(() => {
+    localStorage.setItem('header_row2', JSON.stringify(row2Buttons));
+  }, [row2Buttons]);
+
+  const [draggedItem, setDraggedItem] = useState<{ id: string, sourceRow: 1 | 2, index: number } | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, id: string, sourceRow: 1 | 2, index: number) => {
+    setDraggedItem({ id, sourceRow, index });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, targetRow: 1 | 2, targetIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedItem) return;
+
+    const { id, sourceRow, index: sourceIndex } = draggedItem;
+    
+    if (sourceRow === targetRow && sourceIndex === targetIndex) {
+      setDraggedItem(null);
+      return;
+    }
+
+    const sourceArray = sourceRow === 1 ? [...row1Buttons] : [...row2Buttons];
+    const targetArray = targetRow === 1 ? [...row1Buttons] : [...row2Buttons];
+    
+    const itemToMove = sourceArray[sourceIndex];
+    sourceArray.splice(sourceIndex, 1);
+    
+    if (sourceRow === targetRow) {
+        sourceArray.splice(targetIndex, 0, itemToMove);
+        if (targetRow === 1) setRow1Buttons(sourceArray);
+        else setRow2Buttons(sourceArray);
+    } else {
+        targetArray.splice(targetIndex, 0, itemToMove);
+        if (sourceRow === 1) setRow1Buttons(sourceArray);
+        else setRow2Buttons(sourceArray);
+        
+        if (targetRow === 1) setRow1Buttons(targetArray);
+        else setRow2Buttons(targetArray);
+    }
+    
+    setDraggedItem(null);
+  };
+
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('favorite_coins');
@@ -292,54 +454,6 @@ export const Header: React.FC = () => {
   ).slice(0, 10);
 
   const timeframes = ['1S', '1M', '5M', '15M', '1H', '4H', '1D'];
-
-  // Row 1 Buttons Array
-  const row1Buttons = [
-    { id: 'RSI', label: 'RSI', theme: 'steel' },
-    { id: 'DELTA', label: 'DELTA', theme: 'steel' },
-    { id: 'D-DELTA', label: 'D-DELTA', theme: 'steel' },
-    { id: 'DELTA-V', label: 'DELTA-V', theme: 'steel' },
-    { id: 'WHALE', label: 'WHALE', theme: 'steel' },
-    { id: 'EMA', label: 'EMA', theme: 'purple' },
-    { id: 'LEZ', label: 'LEZ', theme: 'cyan' },
-    { id: 'VPT', label: 'VPT', theme: 'orange' },
-    { id: 'DOM-LIQ', label: 'DOM-LIQ', theme: 'cyan' },
-    { id: 'DOM-PROF', label: 'DOM-PROF', theme: 'green' },
-    { id: 'MMS', label: 'MMS', theme: 'purple' },
-    { id: 'NEWS', label: 'NEWS', theme: 'blue' },
-    { id: 'LIQ-POOL', label: 'LIQ-POOL', theme: 'pink' },
-    { id: 'PACE', label: 'PACE', theme: 'orange' },
-    { id: 'FVG', label: 'FVG', theme: 'rose' }
-  ];
-
-  // Row 2 Buttons Array
-  const row2Buttons = [
-    { id: 'VWBA', label: 'OBScan', theme: 'green' },
-    { id: 'TWB', label: 'TWB', theme: 'steel' },
-    { id: 'FOOT', label: 'FOOT', theme: 'steel' },
-    { id: 'STATS', label: 'STATS', theme: 'steel' },
-    { id: 'LIQ-V', label: 'LIQ-V', theme: 'cyan' },
-    { id: 'SK', label: 'SK', theme: 'orange' },
-    { id: 'EW', label: 'EW', theme: 'pink' },
-    { id: 'WYC', label: 'WYC', theme: 'purple' },
-    { id: 'SMC', label: 'SMC', theme: 'blue' },
-    { id: 'CRT', label: 'CRT', theme: 'pink' },
-    { id: 'VWAP', label: 'VWAP', theme: 'steel' },
-    { id: 'SESS', label: 'SESS', theme: 'steel' },
-      { id: 'SESSION', label: 'SESSION', theme: 'steel' },
-    { id: 'VOL', label: 'VOL', theme: 'steel' },
-    { id: 'D-OPEN', label: 'D-OPEN', theme: 'white' },
-    { id: 'D-TPO', label: 'D-TPO', theme: 'purple' },
-    { id: 'D-VOL', label: 'D-VOL', theme: 'blue' },
-    { id: 'N-POC', label: 'N-POC', theme: 'orange' },
-    { id: 'ABS', label: 'ABS', theme: 'yellow' },
-    { id: 'HV-BUY', label: 'HV-BUY', theme: 'cyan' },
-    { id: 'HV-SELL', label: 'HV-SELL', theme: 'pink' },
-    { id: 'PIVOT', label: 'PIVOT', theme: 'purple' },
-    { id: 'AVWAP', label: 'MPAS', theme: 'blue' },
-    { id: 'SPOOF', label: 'SPOOF', theme: 'orange' },
-    { id: 'MTF', label: 'MTF', theme: 'orange' }
-  ];
 
   // Customizable threshold controls rendered in Row 3
 
@@ -944,11 +1058,15 @@ export const Header: React.FC = () => {
         <div className="hidden md:block h-6 w-[1px] bg-slate-800 shrink-0 mx-1" />
 
         {/* Row 1 indicators (Desktop Only) */}
-        <div className="hidden md:flex items-center gap-1.5">
-          {row1Buttons.map((btn) => (
+        <div className="hidden md:flex items-center gap-1.5" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 1, row1Buttons.length)}>
+          {row1Buttons.map((btn, idx) => (
             <button
               id={`header-btn-${btn.id}`}
               key={btn.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, btn.id, 1, idx)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, 1, idx)}
               onClick={() => handleToggle(btn.id)}
               className={getButtonStyle(btn.theme, isButtonActive(btn.id))}
             >
@@ -959,11 +1077,15 @@ export const Header: React.FC = () => {
       </div>
 
       {/* ROW 2: VWBA through FP SHAPE (Desktop Only) */}
-      <div className="hidden md:flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 whitespace-nowrap w-full">
-        {row2Buttons.map((btn) => (
+      <div className="hidden md:flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 whitespace-nowrap w-full min-h-[36px]" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 2, row2Buttons.length)}>
+        {row2Buttons.map((btn, idx) => (
           <button
             id={`header-btn-${btn.id}`}
             key={btn.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, btn.id, 2, idx)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, 2, idx)}
             onClick={() => handleToggle(btn.id)}
             className={getButtonStyle(btn.theme, isButtonActive(btn.id))}
           >
@@ -1063,6 +1185,37 @@ export const Header: React.FC = () => {
           )}
         </button>
 
+        {/* Sound Toggle */}
+        <button
+          id="header-btn-SOUND"
+          onClick={() => {
+            const nextVal = !settings.soundEnabled;
+            updateSettings('soundEnabled', nextVal);
+            setLEZState(() => ({ soundEnabled: nextVal }));
+            localStorage.setItem('lez_sound_enabled', String(nextVal));
+          }}
+          className={`h-7 px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border flex items-center gap-1.5 transition-all shrink-0 rounded whitespace-nowrap cursor-pointer ${
+            settings.soundEnabled
+              ? 'border-cyan-500/70 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20'
+              : 'border-slate-700 text-slate-500 hover:text-slate-400 bg-slate-900/50 hover:bg-slate-800'
+          }`}
+          title="Toggle Alert Sounds"
+        >
+          {settings.soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+          <span>SOUND</span>
+        </button>
+
+        {/* Notes Button */}
+        <button
+          id="header-btn-NOTES"
+          onClick={() => setIsNotesOpen(true)}
+          className="h-7 px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border border-purple-500/70 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-all shrink-0 rounded whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+          title="Character/Symbol Notes"
+        >
+          <Edit3 className="w-3.5 h-3.5" />
+          <span>NOTES</span>
+        </button>
+
         <button
           id="header-btn-LOGOUT"
           onClick={() => {
@@ -1081,10 +1234,14 @@ export const Header: React.FC = () => {
       {mobileTab === 'indicators' && (
         <div className="md:hidden absolute top-full left-0 w-full bg-[#0b0e14]/95 border-b border-[#141a22] p-4 shadow-2xl z-50 flex flex-wrap gap-2.5 backdrop-blur-md max-h-[60vh] overflow-y-auto">
           <div className="w-full text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Primary Indicators</div>
-          {row1Buttons.map((btn) => (
+          {row1Buttons.map((btn, idx) => (
             <button
               id={`header-btn-mobile-${btn.id}`}
               key={btn.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, btn.id, 1, idx)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, 1, idx)}
               onClick={() => handleToggle(btn.id)}
               className={getButtonStyle(btn.theme, isButtonActive(btn.id))}
             >
@@ -1093,10 +1250,14 @@ export const Header: React.FC = () => {
           ))}
           <div className="w-full h-[1px] bg-slate-800/50 my-2" />
           <div className="w-full text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Secondary Indicators</div>
-          {row2Buttons.map((btn) => (
+          {row2Buttons.map((btn, idx) => (
             <button
               id={`header-btn-mobile-${btn.id}`}
               key={btn.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, btn.id, 2, idx)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, 2, idx)}
               onClick={() => handleToggle(btn.id)}
               className={getButtonStyle(btn.theme, isButtonActive(btn.id))}
             >
@@ -1419,6 +1580,11 @@ export const Header: React.FC = () => {
       <LEZSignalsModal
         isOpen={isSignalsModalOpen}
         onClose={() => setIsSignalsModalOpen(false)}
+      />
+
+      <NotesModal
+        isOpen={isNotesOpen}
+        onClose={() => setIsNotesOpen(false)}
       />
     </div>
   );

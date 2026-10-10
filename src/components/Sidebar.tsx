@@ -86,6 +86,9 @@ export const Sidebar: React.FC = () => {
     { type: 'circle', icon: <Circle className="w-4 h-4" />, label: 'Circle' },
     { type: 'triangle', icon: <Triangle className="w-4 h-4" />, label: 'Triangle' },
     { type: 'path', icon: <PenTool className="w-4 h-4" />, label: 'Path (Brush)' },
+        { type: 'fib-retracement', icon: <div className="font-bold text-[10px] tracking-tighter">FIB</div>, label: 'Fib Retracement' },
+    { type: 'fib-extension', icon: <div className="font-bold text-[10px] tracking-tighter">EXT</div>, label: 'Trend-Based Fib Extension' },
+    { type: '0abc', icon: <div className="font-bold text-[10px] tracking-tighter">0ABC</div>, label: '0 A B C Point' },
     { type: 'text-box', icon: <Type className="w-4 h-4" />, label: 'Text Box' },
     { type: 'price-tag', icon: <Tag className="w-4 h-4" />, label: 'Price Tag' },
     { type: 'measure', icon: <Ruler className="w-4 h-4" />, label: 'Measure Tool' },
@@ -194,4 +197,5 @@ export const Sidebar: React.FC = () => {
     </div>
   );
 };
+
 

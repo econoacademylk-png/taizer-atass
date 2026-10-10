@@ -5449,9 +5449,19 @@ export const ChartContainer: React.FC = () => {
       const x2 = timeToX(d.points[1].time);
       const y2 = priceToY(d.points[1].price);
       const pRange = d.points[1].price - d.points[0].price;
-      const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+      
+      const levels = [
+        { value: 0, color: "#9e9e9e" },
+        { value: 0.236, color: "#f44336" },
+        { value: 0.382, color: "#ff9800" },
+        { value: 0.5, color: "#4caf50" },
+        { value: 0.618, color: "#009688" },
+        { value: 0.65, color: "#ff9800" },
+        { value: 0.786, color: "#00bcd4" },
+        { value: 1, color: "#9e9e9e" }
+      ];
 
-      // Draw trendline
+      ctx.strokeStyle = "#888888";
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.moveTo(x1, y1);
@@ -5459,31 +5469,46 @@ export const ChartContainer: React.FC = () => {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      levels.forEach((lvl) => {
-        const lvlPrice = d.points[0].price + pRange * lvl;
+      const startX = Math.min(x1, x2);
+      const endX = Math.max(x1, x2) + 150;
+      let prevY = 0;
+
+      levels.forEach((lvl, idx) => {
+        const lvlPrice = d.points[1].price - pRange * lvl.value;
         const lvlY = priceToY(lvlPrice);
-        ctx.strokeStyle = lvl === 0.618 || lvl === 0.382 ? "#FFE100" : d.color;
-        ctx.fillStyle = ctx.strokeStyle;
+        
+        if (idx > 0) {
+          ctx.save();
+          ctx.fillStyle = lvl.color;
+          ctx.globalAlpha = 0.15;
+          ctx.fillRect(startX, Math.min(prevY, lvlY), endX - startX, Math.abs(lvlY - prevY));
+          ctx.restore();
+        }
+        prevY = lvlY;
+
+        ctx.strokeStyle = lvl.color;
+        ctx.fillStyle = lvl.color;
+        
         ctx.beginPath();
-        ctx.moveTo(x1, lvlY);
-        ctx.lineTo(Math.max(x1, x2) + 100, lvlY);
+        ctx.moveTo(startX, lvlY);
+        ctx.lineTo(endX, lvlY);
         ctx.stroke();
+        
         ctx.font = "10px monospace";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "bottom";
+        let valStr = lvl.value === 0 || lvl.value === 1 ? lvl.value.toString() : lvl.value.toString();
         ctx.fillText(
-          `${lvl.toFixed(3)} (${lvlPrice.toFixed(2)})`,
-          Math.max(x1, x2) + 105,
-          lvlY + 4,
+          `${valStr} (${lvlPrice.toFixed(5)})`,
+          startX + 5,
+          lvlY - 2
         );
       });
-      
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 12px sans-serif";
-      ctx.fillText("A", x1 - 10, y1 - 10);
-      ctx.fillText("B", x2 - 10, y2 - 10);
       drawVertices();
     } else if (d.type === "fib-extension" && d.points.length >= 2) {
       const x2 = timeToX(d.points[1].time);
       const y2 = priceToY(d.points[1].price);
+      ctx.strokeStyle = "#888888";
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.moveTo(x1, y1);
@@ -5494,6 +5519,7 @@ export const ChartContainer: React.FC = () => {
       if (d.points.length >= 3) {
         const x3 = timeToX(d.points[2].time);
         const y3 = priceToY(d.points[2].price);
+        ctx.strokeStyle = "#888888";
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
         ctx.moveTo(x2, y2);
@@ -5502,30 +5528,102 @@ export const ChartContainer: React.FC = () => {
         ctx.setLineDash([]);
 
         const pRange = d.points[1].price - d.points[0].price;
-        const levels = [0, 0.618, 1, 1.618, 2.618];
-        levels.forEach((lvl) => {
-          const lvlPrice = d.points[2].price + pRange * lvl;
+        const levels = [
+          { value: 0, color: "#9e9e9e" },
+          { value: 0.236, color: "#f44336" },
+          { value: 0.382, color: "#ff9800" },
+          { value: 0.5, color: "#4caf50" },
+          { value: 0.618, color: "#009688" },
+          { value: 0.786, color: "#00bcd4" },
+          { value: 1, color: "#9e9e9e" },
+          { value: 1.325, color: "#ff9800" },
+          { value: 1.618, color: "#2962ff" }
+        ];
+
+        let prevY = 0;
+        
+        // Determine extending direction based on points 2 and 3
+        const isRight = x3 >= x1;
+        const endX = isRight ? x3 + 300 : x3 - 300;
+        const startX = Math.min(x3, endX);
+        const rectWidth = Math.abs(endX - x3);
+
+        levels.forEach((lvl, idx) => {
+          const lvlPrice = d.points[2].price + pRange * lvl.value;
           const lvlY = priceToY(lvlPrice);
-          ctx.strokeStyle = lvl === 0.618 || lvl === 1.618 ? "#FFD700" : d.color;
-          ctx.fillStyle = ctx.strokeStyle;
+
+          if (idx > 0) {
+            ctx.save();
+            ctx.fillStyle = lvl.color;
+            ctx.globalAlpha = 0.15;
+            ctx.fillRect(startX, Math.min(prevY, lvlY), rectWidth, Math.abs(lvlY - prevY));
+            ctx.restore();
+          }
+          prevY = lvlY;
+
+          ctx.strokeStyle = lvl.color;
+          ctx.fillStyle = lvl.color;
           ctx.beginPath();
           ctx.moveTo(x3, lvlY);
-          ctx.lineTo(x3 + 150, lvlY);
+          ctx.lineTo(endX, lvlY);
           ctx.stroke();
+
           ctx.font = "10px monospace";
+          ctx.textAlign = isRight ? "left" : "right";
+          ctx.textBaseline = "bottom";
+          let valStr = lvl.value === 0 || lvl.value === 1 ? lvl.value.toString() : lvl.value.toString();
           ctx.fillText(
-            `${lvl.toFixed(3)} (${lvlPrice.toFixed(2)})`,
-            x3 + 155,
-            lvlY + 4,
+            `${valStr} (${lvlPrice.toFixed(5)})`,
+            isRight ? x3 + 5 : x3 - 5,
+            lvlY - 2
           );
         });
-      
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 12px sans-serif";
-        ctx.fillText("A", x1 - 10, y1 - 10);
-        ctx.fillText("B", x2 - 10, y2 - 10);
-        ctx.fillText("C", x3 - 10, y3 - 10);
       }
+      drawVertices();
+    } else if (d.type === "0abc") {
+      ctx.strokeStyle = "#FFE100";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < d.points.length; i++) {
+         const px = timeToX(d.points[i].time);
+         const py = priceToY(d.points[i].price);
+         if (i === 0) ctx.moveTo(px, py);
+         else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      const labels = ["(0)", "(A)", "(B)", "(C)"];
+      for (let i = 0; i < d.points.length; i++) {
+         const px = timeToX(d.points[i].time);
+         const py = priceToY(d.points[i].price);
+         
+         ctx.beginPath();
+         ctx.arc(px, py, 6, 0, 2*Math.PI);
+         ctx.fillStyle = "#000000";
+         ctx.fill();
+         ctx.strokeStyle = "#2962ff";
+         ctx.lineWidth = 2;
+         ctx.stroke();
+
+         ctx.font = "bold 14px Arial";
+         ctx.fillStyle = "#FFE100";
+         ctx.textAlign = "center";
+         ctx.textBaseline = "middle";
+         
+         let isPeak = false;
+         if (i === 0) {
+            isPeak = d.points.length > 1 && d.points[1].price < d.points[0].price;
+         } else if (i === d.points.length - 1) {
+            isPeak = d.points[i].price > d.points[i-1].price;
+         } else {
+            isPeak = d.points[i].price > d.points[i-1].price;
+         }
+         
+         const textY = isPeak ? py - 20 : py + 20;
+         ctx.fillText(labels[i], px, textY);
+      }
+      drawVertices();
+
       drawVertices();
     } else if (
       (d.type === "long" || d.type === "short") &&
@@ -5544,13 +5642,14 @@ export const ChartContainer: React.FC = () => {
         stopY = d.type === "long" ? y1 + targetDiff * 0.4 : y1 - targetDiff * 0.4;
       }
 
-      ctx.fillStyle = "rgba(0, 192, 118, 0.15)";
+      ctx.fillStyle = d.type === "long" ? "rgba(0, 192, 118, 0.15)" : "rgba(255, 59, 48, 0.15)";
       ctx.fillRect(x1, Math.min(y1, y2), x2 - x1, Math.abs(y2 - y1));
-      ctx.fillStyle = "rgba(255, 59, 48, 0.15)";
+      ctx.fillStyle = d.type === "long" ? "rgba(255, 59, 48, 0.15)" : "rgba(0, 192, 118, 0.15)";
       ctx.fillRect(x1, Math.min(y1, stopY), x2 - x1, Math.abs(stopY - y1));
-      ctx.strokeStyle = "#00c076";
+      
+      ctx.strokeStyle = d.type === "long" ? "#00c076" : "#ff3b30";
       ctx.strokeRect(x1, Math.min(y1, y2), x2 - x1, Math.abs(y2 - y1));
-      ctx.strokeStyle = "#ff3b30";
+      ctx.strokeStyle = d.type === "long" ? "#ff3b30" : "#00c076";
       ctx.strokeRect(x1, Math.min(y1, stopY), x2 - x1, Math.abs(stopY - y1));
 
       const entryPrice = yToPrice(y1);
@@ -5559,39 +5658,46 @@ export const ChartContainer: React.FC = () => {
       
       const targetPct = Math.abs((targetPrice - entryPrice) / entryPrice * 100).toFixed(2);
       const stopPct = Math.abs((stopLossPrice - entryPrice) / entryPrice * 100).toFixed(2);
-      const rr = stopPct !== "0.00" ? (parseFloat(targetPct) / parseFloat(stopPct)).toFixed(2) : "∞";
+      const rr = stopPct !== "0.00" ? (parseFloat(targetPct) / parseFloat(stopPct)).toFixed(2) : "8";
 
       ctx.fillStyle = "#ffffff";
       ctx.font = "11px sans-serif";
       
       const textPadding = 4;
       
-      // Target %
-      const targetText = targetPct + "%";
+      // Target % and Price
+      const targetText = `${targetPct}% (${targetPrice.toFixed(5)})`;
       const targetTextWidth = ctx.measureText(targetText).width;
-      ctx.fillStyle = "rgba(0, 192, 118, 0.4)";
-      ctx.fillRect(x1 + 5, Math.min(y1, y2) + Math.abs(y2 - y1) / 2 - 6, targetTextWidth + textPadding * 2, 16);
+      ctx.fillStyle = d.type === "long" ? "rgba(0, 192, 118, 0.6)" : "rgba(255, 59, 48, 0.6)";
+      ctx.fillRect(x1 + 5, Math.min(y1, y2) + Math.abs(y2 - y1) / 2 - 8, targetTextWidth + textPadding * 2, 18);
       ctx.fillStyle = "#ffffff";
       ctx.fillText(targetText, x1 + 5 + textPadding, Math.min(y1, y2) + Math.abs(y2 - y1) / 2 + 5);
       
-      // Stop %
-      const stopText = stopPct + "%";
+      // Stop % and Price
+      const stopText = `${stopPct}% (${stopLossPrice.toFixed(5)})`;
       const stopTextWidth = ctx.measureText(stopText).width;
-      ctx.fillStyle = "rgba(255, 59, 48, 0.4)";
-      ctx.fillRect(x1 + 5, Math.min(y1, stopY) + Math.abs(stopY - y1) / 2 - 6, stopTextWidth + textPadding * 2, 16);
+      ctx.fillStyle = d.type === "long" ? "rgba(255, 59, 48, 0.6)" : "rgba(0, 192, 118, 0.6)";
+      ctx.fillRect(x1 + 5, Math.min(y1, stopY) + Math.abs(stopY - y1) / 2 - 8, stopTextWidth + textPadding * 2, 18);
       ctx.fillStyle = "#ffffff";
       ctx.fillText(stopText, x1 + 5 + textPadding, Math.min(y1, stopY) + Math.abs(stopY - y1) / 2 + 5);
       
-      // RR Ratio
-      const rrText = "RR: " + rr;
+      // Entry Price & RR
+      const rrText = `Entry: ${entryPrice.toFixed(5)}  |  RR: ${rr}`;
       const rrTextWidth = ctx.measureText(rrText).width;
-      ctx.fillStyle = "rgba(20, 25, 30, 0.6)";
-      ctx.fillRect(x1 + 5, y1 + (d.type === "long" ? -18 : 7), rrTextWidth + textPadding * 2, 16);
+      ctx.fillStyle = "rgba(20, 25, 30, 0.8)";
+      ctx.fillRect(x1 + 5, y1 + (d.type === "long" ? -20 : 2), rrTextWidth + textPadding * 2, 18);
       ctx.fillStyle = "#ffffff";
-      ctx.fillText(rrText, x1 + 5 + textPadding, y1 + (d.type === "long" ? -7 : 18));
+      ctx.fillText(rrText, x1 + 5 + textPadding, y1 + (d.type === "long" ? -7 : 15));
       
+      // Draw Middle Entry Line Explicitly
+      ctx.strokeStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y1);
+      ctx.stroke();
+
       // Axis Price Tags
-      const drawAxisTag = (y: number, text: string, bgColor: string, txtColor: string = "#ffffff") => {
+      const drawAxisTag = (y, text, bgColor, txtColor = "#ffffff") => {
         if (y < 0 || y > chartHeight) return;
         ctx.fillStyle = bgColor;
         ctx.fillRect(chartWidth + 2, y - 8, 80, 16);
@@ -5601,10 +5707,15 @@ export const ChartContainer: React.FC = () => {
         ctx.textAlign = "left"; // reset
       };
       
-      drawAxisTag(y2, targetPrice.toFixed(2), "#00c076"); // TP
-      drawAxisTag(y1, entryPrice.toFixed(2), "#555555");  // Entry
-      drawAxisTag(stopY, stopLossPrice.toFixed(2), "#ff3b30"); // SL
-
+      drawAxisTag(y2, targetPrice.toFixed(5), d.type === "long" ? "#00c076" : "#ff3b30"); // TP
+      drawAxisTag(y1, entryPrice.toFixed(5), "#555555");  // Entry
+      drawAxisTag(stopY, stopLossPrice.toFixed(5), d.type === "long" ? "#ff3b30" : "#00c076"); // SL
+      drawVertices();
+      // Ensure missing 3rd point handles backwards compat (so dragging point 1 doesn't magically break SL if we want independence)
+      // Actually, dragging the SL will only work if there are 3 points. 
+      // If there are 2 points, we'll draw a phantom vertex for SL so the user realizes they can't drag it yet?
+      // No, we should just let the current logic handle it.
+      
       drawVertices();
     }
   });
@@ -7946,9 +8057,8 @@ const yToPrice = (y: number): number => {
           pts.push({ time: newPoint.time, price: slPrice });
         }
         
-        const is3Point = ["fib-extension", "triangle"].includes(
-          activeDrawingTool,
-        );
+        const is3Point = ["fib-extension", "triangle"].includes(activeDrawingTool);
+        const is4Point = ["0abc"].includes(activeDrawingTool);
 
         const finishedDrawing: Drawing = { ...vs.currentDrawing, points: pts };
         setDrawings((prev) =>
@@ -7958,7 +8068,8 @@ const yToPrice = (y: number): number => {
         );
 
         if (is3Point && pts.length < 3) {
-          // Wait for 3rd click, update current drawing in view state
+          vs.currentDrawing = finishedDrawing;
+        } else if (is4Point && pts.length < 4) {
           vs.currentDrawing = finishedDrawing;
         } else {
           // Finished 2-point or 3-point
@@ -7994,7 +8105,7 @@ const yToPrice = (y: number): number => {
         const py = priceToY(d.points[0].price);
         if (Math.abs(y - py) < 10) hitId = d.id;
       } else if (
-        ["trendline", "measure", "fib-retracement", "fib-extension", "path"].includes(
+        ["trendline", "measure", "fib-retracement", "fib-extension", "path", "0abc"].includes(
           d.type,
         )
       ) {
