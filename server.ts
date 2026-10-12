@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
@@ -565,9 +564,10 @@ apiRouter.get("/health", async (req, res) => {
   app.use("/.netlify/functions/api", apiRouter);
   app.use(apiRouter);
 
-  // Local Dev Server start
-  if (process.env.NODE_ENV !== 'production') {
+  // Local Dev Server start (only when running locally, never inside Netlify/Lambda)
+  if (process.env.NODE_ENV !== 'production' && !process.env.NETLIFY && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
     async function startDevServer() {
+      const { createServer: createViteServer } = await import("vite");
       const PORT = process.env.PORT || 5000;
       const vite = await createViteServer({
         server: { middlewareMode: true },
