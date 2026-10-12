@@ -20,7 +20,13 @@ export function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: email, password })
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        setError(`Server error (${res.status}): Please check backend or database connection.`);
+        return;
+      }
       
       if (!res.ok) {
         if (data.error === 'pending' || data.error === 'expired') {

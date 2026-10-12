@@ -23,29 +23,38 @@ const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 // Database Connection
 const ATLAS_URI = 'mongodb://supundilshan358_db_user:ZaAoLY6pOTlsPg5D@ac-h1v7wnr-shard-00-00.ouxm37c.mongodb.net:27017,ac-h1v7wnr-shard-00-01.ouxm37c.mongodb.net:27017,ac-h1v7wnr-shard-00-02.ouxm37c.mongodb.net:27017/taizer-atass?ssl=true&replicaSet=atlas-xaj0ke-shard-0&authSource=admin&appName=Cluster0';
 
+let cachedPromise: Promise<typeof mongoose> | null = null;
+
 async function connectDB() {
   if (mongoose.connection.readyState === 1) return;
-  const MONGO_URI = process.env.MONGO_URI || ATLAS_URI;
-  await mongoose.connect(MONGO_URI, { 
-    dbName: 'taizer-atass',
-    serverSelectionTimeoutMS: 5000,
-  });
-  console.log(`Connected to MongoDB database: taizer-atass`);
-  
-  try {
-    const adminExists = await User.findOne({ username: 'admin' });
-    if (!adminExists) {
-      await User.create({
-        username: 'admin',
-        password: 'password',
-        role: 'admin',
-        approved: true
-      });
-      console.log('Seeded default admin account');
-    }
-  } catch (seedErr) {
-    console.error('Error checking default admin:', seedErr);
+  if (!cachedPromise) {
+    const MONGO_URI = process.env.MONGO_URI || ATLAS_URI;
+    cachedPromise = mongoose.connect(MONGO_URI, { 
+      dbName: 'taizer-atass',
+      serverSelectionTimeoutMS: 8000,
+    }).then(async (m) => {
+      console.log('Connected to MongoDB database: taizer-atass');
+      try {
+        const adminExists = await User.findOne({ username: 'admin' });
+        if (!adminExists) {
+          await User.create({
+            username: 'admin',
+            password: 'password',
+            role: 'admin',
+            approved: true
+          });
+          console.log('Seeded default admin account');
+        }
+      } catch (seedErr) {
+        console.error('Error checking default admin:', seedErr);
+      }
+      return m;
+    }).catch(err => {
+      cachedPromise = null;
+      throw err;
+    });
   }
+  await cachedPromise;
 }
 
 export const app = express();
@@ -71,6 +80,33 @@ app.use(async (req, res, next) => {
     res.status(500).json({ error: 'Database connection failed: ' + (err.message || 'unknown error') });
   }
 });
+
+// Health / DB Diagnostic Endpoint
+app.get("/api/health", async (req, res) => {
+  try {
+    const start = Date.now();
+    await connectDB();
+    const dbState = mongoose.connection.readyState;
+    const usersCount = await User.countDocuments();
+    res.json({
+      status: "OK",
+      database: dbState === 1 ? "Connected" : "Disconnected",
+      dbReadyState: dbState,
+      usersCount,
+      durationMs: Date.now() - start,
+      time: new Date().toISOString()
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      status: "ERROR",
+      database: "Connection Failed",
+      error: err.message,
+      name: err.name,
+      time: new Date().toISOString()
+    });
+  }
+});
+
 
   if (!process.env.GEMINI_API_KEY) {
     console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");

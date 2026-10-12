@@ -29,10 +29,16 @@ export function AdminLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        setError(`Server error (${res.status}): Please check backend or database connection.`);
+        return;
+      }
       
       if (!res.ok) {
-        setError(data.error || 'Login failed');
+        setError(data.error || data.message || 'Login failed');
         return;
       }
       
