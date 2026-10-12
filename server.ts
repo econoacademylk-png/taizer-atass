@@ -21,28 +21,30 @@ const upload = multer({ storage: storage });
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
 // Database Connection
-let isConnected = false;
+const ATLAS_URI = 'mongodb://supundilshan358_db_user:ZaAoLY6pOTlsPg5D@ac-h1v7wnr-shard-00-00.ouxm37c.mongodb.net:27017,ac-h1v7wnr-shard-00-01.ouxm37c.mongodb.net:27017,ac-h1v7wnr-shard-00-02.ouxm37c.mongodb.net:27017/taizer-atass?ssl=true&replicaSet=atlas-xaj0ke-shard-0&authSource=admin&appName=Cluster0';
+
 async function connectDB() {
-  if (isConnected) return;
-  const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taizer-atass';
+  if (mongoose.connection.readyState === 1) return;
+  const MONGO_URI = process.env.MONGO_URI || ATLAS_URI;
+  await mongoose.connect(MONGO_URI, { 
+    dbName: 'taizer-atass',
+    serverSelectionTimeoutMS: 5000,
+  });
+  console.log(`Connected to MongoDB database: taizer-atass`);
+  
   try {
-    await mongoose.connect(MONGO_URI, { dbName: 'taizer-atass' });
-    console.log(`Connected to MongoDB database: taizer-atass`);
-    
-    // Seed default admin if it doesn't exist
     const adminExists = await User.findOne({ username: 'admin' });
     if (!adminExists) {
       await User.create({
         username: 'admin',
-        password: 'password', // in a real app, hash this!
+        password: 'password',
         role: 'admin',
         approved: true
       });
       console.log('Seeded default admin account');
     }
-    isConnected = true;
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
+  } catch (seedErr) {
+    console.error('Error checking default admin:', seedErr);
   }
 }
 
@@ -50,9 +52,24 @@ export const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/api', async (req, res, next) => {
-  await connectDB();
+// Normalize URLs: handles Netlify redirects where /api is stripped or prefixed with functions path
+app.use((req, res, next) => {
+  if (req.url.startsWith('/.netlify/functions/api')) {
+    req.url = req.url.replace('/.netlify/functions/api', '/api');
+  } else if (!req.url.startsWith('/api')) {
+    req.url = '/api' + req.url;
+  }
   next();
+});
+
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err: any) {
+    console.error('MongoDB connection error:', err);
+    res.status(500).json({ error: 'Database connection failed: ' + (err.message || 'unknown error') });
+  }
 });
 
   if (!process.env.GEMINI_API_KEY) {
