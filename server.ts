@@ -61,17 +61,20 @@ export const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Normalize URLs: handles Netlify redirects where /api is stripped or prefixed with functions path
-app.use((req, res, next) => {
-  if (req.url.startsWith('/.netlify/functions/api')) {
-    req.url = req.url.replace('/.netlify/functions/api', '/api');
-  } else if (!req.url.startsWith('/api')) {
-    req.url = '/api' + req.url;
-  }
-  next();
-});
+// Serverless URL normalization: only active in Netlify / Lambda environment
+if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT) {
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/.netlify/functions/api')) {
+      req.url = req.url.replace('/.netlify/functions/api', '/api');
+    } else if (!req.url.startsWith('/api')) {
+      req.url = '/api' + req.url;
+    }
+    next();
+  });
+}
 
-app.use(async (req, res, next) => {
+// Ensure database connection ONLY for /api requests (keeps frontend / Vite assets fast and working)
+app.use('/api', async (req, res, next) => {
   try {
     await connectDB();
     next();
