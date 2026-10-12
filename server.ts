@@ -61,20 +61,10 @@ export const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serverless URL normalization: only active in Netlify / Lambda environment
-if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT) {
-  app.use((req, res, next) => {
-    if (req.url.startsWith('/.netlify/functions/api')) {
-      req.url = req.url.replace('/.netlify/functions/api', '/api');
-    } else if (!req.url.startsWith('/api')) {
-      req.url = '/api' + req.url;
-    }
-    next();
-  });
-}
+export const apiRouter = express.Router();
 
-// Ensure database connection ONLY for /api requests (keeps frontend / Vite assets fast and working)
-app.use('/api', async (req, res, next) => {
+// Ensure database connection for all API routes
+apiRouter.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
@@ -85,7 +75,7 @@ app.use('/api', async (req, res, next) => {
 });
 
 // Health / DB Diagnostic Endpoint
-app.get("/api/health", async (req, res) => {
+apiRouter.get("/health", async (req, res) => {
   try {
     const start = Date.now();
     await connectDB();
@@ -122,7 +112,7 @@ app.get("/api/health", async (req, res) => {
   let cachedNews: any = null;
   let lastNewsFetch = 0;
 
-  app.get("/api/news", async (req, res) => {
+  apiRouter.get("/news", async (req, res) => {
     try {
       if (cachedNews && Date.now() - lastNewsFetch < 3600000) {
         return res.json(cachedNews);
@@ -150,7 +140,7 @@ app.get("/api/health", async (req, res) => {
   });
 
   // --- AUTH & ADMIN API ---
-  app.post("/api/auth/check-user", async (req, res) => {
+  apiRouter.post("/auth/check-user", async (req, res) => {
     try {
       const { username, email } = req.body;
       const existingUsername = await User.findOne({ username });
@@ -167,7 +157,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.post("/api/auth/register", async (req, res) => {
+  apiRouter.post("/auth/register", async (req, res) => {
     try {
       const { username, password, firstName, lastName, email, phone, address, city, postalCode } = req.body;
       if (!username || !password || !email) return res.status(400).json({ error: "Missing required fields" });
@@ -189,7 +179,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.post("/api/auth/submit-payment", upload.single('receipt'), async (req, res) => {
+  apiRouter.post("/auth/submit-payment", upload.single('receipt'), async (req, res) => {
     try {
       const { username, paymentMethod, transactionId, selectedPackage } = req.body;
       if (!username || !selectedPackage) return res.status(400).json({ error: "Missing required fields" });
@@ -217,7 +207,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  apiRouter.post("/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
       const cleanUsername = (username || '').trim();
@@ -297,7 +287,7 @@ app.get("/api/health", async (req, res) => {
   // --- ONLINE USERS TRACKING ---
   const onlineUsers = new Map<string, { lastSeen: number, username: string }>();
   
-  app.post("/api/heartbeat", (req, res) => {
+  apiRouter.post("/heartbeat", (req, res) => {
     const { userId, username } = req.body;
     if (userId) {
       onlineUsers.set(userId, { lastSeen: Date.now(), username: username || 'Guest' });
@@ -305,7 +295,7 @@ app.get("/api/health", async (req, res) => {
     res.status(200).send("OK");
   });
 
-  app.get("/api/admin/onlineUsers", authenticateAdmin, (req, res) => {
+  apiRouter.get("/admin/onlineUsers", authenticateAdmin, (req, res) => {
     try {
       const now = Date.now();
       let activeCount = 0;
@@ -325,7 +315,7 @@ app.get("/api/health", async (req, res) => {
   });
 
   // --- WHATSAPP SIGNALS API ---
-  app.post("/api/admin/signals", authenticateAdmin, async (req, res) => {
+  apiRouter.post("/admin/signals", authenticateAdmin, async (req, res) => {
     try {
       const { signalNumber } = req.body;
       const existing = await WhatsAppSignal.findOne({ signalNumber });
@@ -343,7 +333,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.get("/api/admin/signals", authenticateAdmin, async (req, res) => {
+  apiRouter.get("/admin/signals", authenticateAdmin, async (req, res) => {
     try {
       const signals = await WhatsAppSignal.find().sort({ createdAt: -1 });
       res.json(signals);
@@ -352,7 +342,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.put("/api/admin/signals/:id", authenticateAdmin, async (req, res) => {
+  apiRouter.put("/admin/signals/:id", authenticateAdmin, async (req, res) => {
     try {
       const updated = await WhatsAppSignal.findByIdAndUpdate(
         req.params.id, 
@@ -365,7 +355,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.delete("/api/admin/signals/:id", authenticateAdmin, async (req, res) => {
+  apiRouter.delete("/admin/signals/:id", authenticateAdmin, async (req, res) => {
     try {
       await WhatsAppSignal.findByIdAndDelete(req.params.id);
       res.json({ message: "Signal deleted" });
@@ -374,7 +364,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.get("/api/admin/users", authenticateAdmin, async (req, res) => {
+  apiRouter.get("/admin/users", authenticateAdmin, async (req, res) => {
     try {
       const users = await User.find().select('-password');
       res.json(users);
@@ -384,7 +374,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.post("/api/admin/users/:id/approve", authenticateAdmin, async (req, res) => {
+  apiRouter.post("/admin/users/:id/approve", authenticateAdmin, async (req, res) => {
     try {
       const { expiryDate } = req.body;
       if (!expiryDate) return res.status(400).json({ error: "Expiry date is required" });
@@ -405,7 +395,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.get("/api/auth/user-status/:username", async (req, res) => {
+  apiRouter.get("/auth/user-status/:username", async (req, res) => {
     try {
       const user = await User.findOne({ username: req.params.username });
       if (!user) return res.status(404).json({ error: "User not found" });
@@ -415,7 +405,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.delete("/api/admin/users/:id", authenticateAdmin, async (req, res) => {
+  apiRouter.delete("/admin/users/:id", authenticateAdmin, async (req, res) => {
     try {
       const user = await User.findByIdAndDelete(req.params.id);
       if (!user) return res.status(404).json({ error: "User not found" });
@@ -426,7 +416,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.get("/api/admin/profile", authenticateAdmin, async (req, res) => {
+  apiRouter.get("/admin/profile", authenticateAdmin, async (req, res) => {
     try {
       const admin = await User.findById((req as any).admin.id).select('-password');
       if (!admin) return res.status(404).json({ error: "Admin not found" });
@@ -437,7 +427,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.put("/api/admin/profile", authenticateAdmin, async (req, res) => {
+  apiRouter.put("/admin/profile", authenticateAdmin, async (req, res) => {
     try {
       const { username, email, password } = req.body;
       const updateData: any = {};
@@ -457,7 +447,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.get("/api/settings", async (req, res) => {
+  apiRouter.get("/settings", async (req, res) => {
     try {
       let settings = await Settings.findOne({ settingsId: 'global' });
       if (!settings) {
@@ -469,7 +459,7 @@ app.get("/api/health", async (req, res) => {
     }
   });
 
-  app.post("/api/admin/settings", authenticateAdmin, async (req, res) => {
+  apiRouter.post("/admin/settings", authenticateAdmin, async (req, res) => {
     try {
       const settings = await Settings.findOneAndUpdate(
         { settingsId: 'global' },
@@ -485,7 +475,7 @@ app.get("/api/health", async (req, res) => {
   // 1. API routes FIRST to prevent Vite routing interceptions
 
   // Proxy Binance klines
-  app.get("/api/binance/klines", async (req, res) => {
+  apiRouter.get("/binance/klines", async (req, res) => {
     try {
       const { symbol, interval, limit } = req.query;
       if (!symbol || !interval) {
@@ -511,7 +501,7 @@ app.get("/api/health", async (req, res) => {
   });
 
   // Proxy Binance premiumIndex (funding rate data)
-  app.get("/api/binance/premiumIndex", async (req, res) => {
+  apiRouter.get("/binance/premiumIndex", async (req, res) => {
     try {
       const { symbol } = req.query;
       if (!symbol) {
@@ -531,7 +521,7 @@ app.get("/api/health", async (req, res) => {
   });
 
   // Proxy Binance openInterest
-  app.get("/api/binance/openInterest", async (req, res) => {
+  apiRouter.get("/binance/openInterest", async (req, res) => {
     try {
       const { symbol } = req.query;
       if (!symbol) {
@@ -551,7 +541,7 @@ app.get("/api/health", async (req, res) => {
   });
 
   // Proxy Binance depth (order book)
-  app.get("/api/binance/depth", async (req, res) => {
+  apiRouter.get("/binance/depth", async (req, res) => {
     try {
       const { symbol, limit } = req.query;
       if (!symbol) {
@@ -569,6 +559,11 @@ app.get("/api/health", async (req, res) => {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // Mount apiRouter on /api, on Netlify functions path, and at root level
+  app.use("/api", apiRouter);
+  app.use("/.netlify/functions/api", apiRouter);
+  app.use(apiRouter);
 
   // Local Dev Server start
   if (process.env.NODE_ENV !== 'production') {
