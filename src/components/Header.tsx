@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTrading } from '../stores/useTradingStore';
 import { ChartType } from '../types/chart';
-import { Search, ChevronDown, Check, X, Star, Trash2, Plus, Zap, Volume2, VolumeX, Edit3 } from 'lucide-react';
+import { Search, ChevronDown, Check, X, Star, Trash2, Plus, Zap, Volume2, VolumeX, Edit3, ShieldAlert } from 'lucide-react';
 import { FAEngineModal } from './FAEngineModal';
 import { useLEZStore, setLEZState } from '../stores/useLEZStore';
 import { LEZSignalsModal } from './LEZSignalsModal';
@@ -1215,6 +1215,27 @@ export const Header: React.FC = () => {
           <Edit3 className="w-3.5 h-3.5" />
           <span>NOTES</span>
         </button>
+
+        {/* Admin / CEO Panel Shortcut */}
+        {(() => {
+          try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            if (u && u.role === 'admin') {
+              return (
+                <button
+                  id="header-btn-ADMIN-PANEL"
+                  onClick={() => window.location.href = '/admin'}
+                  className="h-7 px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest border border-amber-500/80 text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all shrink-0 rounded whitespace-nowrap cursor-pointer flex items-center gap-1.5 animate-pulse"
+                  title="Open Admin / CEO Panel"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                  <span>ADMIN</span>
+                </button>
+              );
+            }
+          } catch {}
+          return null;
+        })()}
 
         <button
           id="header-btn-LOGOUT"

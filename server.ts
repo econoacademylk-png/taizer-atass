@@ -164,7 +164,27 @@ app.use('/api', async (req, res, next) => {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
-      const user = await User.findOne({ username, password });
+      const cleanUsername = (username || '').trim();
+      const cleanPassword = (password || '').trim();
+      const escaped = cleanUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      const user = await User.findOne({
+        $and: [
+          {
+            $or: [
+              { username: cleanUsername },
+              { username: { $regex: new RegExp('^' + escaped + '$', 'i') } },
+              { email: { $regex: new RegExp('^' + escaped + '$', 'i') } }
+            ]
+          },
+          {
+            $or: [
+              { password: password },
+              { password: cleanPassword }
+            ]
+          }
+        ]
+      });
       
       if (!user) return res.status(401).json({ error: "Invalid credentials" });
       
