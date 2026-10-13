@@ -13,6 +13,8 @@ import { calculateRSI, calculateMACD } from "../utils/indicators";
 import { calculateLEZ } from "../utils/lezCalculator";
 import { OBScanBox } from "./OBScanBox";
 import { PaceGauge } from "./PaceGauge";
+import { CandleCountdownWidget } from "./CandleCountdownWidget";
+import { getCandleTimeRemaining } from "../utils/candleCountdown";
 import { API_BASE } from '../config/api';
 
 const formatStatValue = (val: number): string => {
@@ -6448,17 +6450,54 @@ export const ChartContainer: React.FC = () => {
     }
   }
 
-  // --- LIVE PRICE TRACKER ON Y-AXIS ---
+  // --- LIVE PRICE TRACKER & CANDLE COUNTDOWN ON Y-AXIS ---
   const lastCandleObj = activeCandles[activeCandles.length - 1];
   const currentPrice = lastCandleObj ? lastCandleObj.close : 0;
   if (currentPrice > 0) {
     const y = priceToY(currentPrice);
     const isUp = lastCandleObj.close >= lastCandleObj.open;
-    ctx.fillStyle = isUp ? "#10b981" : "#ef4444"; // bg-emerald-500 or bg-rose-500
-    ctx.fillRect(chartWidth, y - 12, 85, 24);
+    const badgeWidth = 85;
+    const priceBadgeH = 22;
+    const timerBadgeH = 17;
+
+    const bottomPanesOffset = bottomPanesTotalHeight;
+    const maxAllowedY = chartHeight - bottomPanesOffset - 5;
+    const showTimerAbove = (y + priceBadgeH / 2 + timerBadgeH) > maxAllowedY;
+
+    const priceBoxY = Math.max(10, Math.min(y - priceBadgeH / 2, maxAllowedY - priceBadgeH - timerBadgeH));
+    const timerBoxY = showTimerAbove ? priceBoxY - timerBadgeH : priceBoxY + priceBadgeH;
+
+    // 1. Live Price Badge (Green when up, Red when down)
+    ctx.fillStyle = isUp ? "#10b981" : "#ef4444";
+    ctx.fillRect(chartWidth, priceBoxY, badgeWidth, priceBadgeH);
+
     ctx.fillStyle = "#ffffff";
     ctx.font = 'bold 12px "JetBrains Mono", monospace';
-    ctx.fillText(formatPrice(currentPrice), chartWidth + 8, y + 1);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(formatPrice(currentPrice), chartWidth + 7, priceBoxY + priceBadgeH / 2);
+
+    // 2. Attached Candle Countdown Badge (Live real-time timer for active timeframe)
+    const activeCandleCountdown = getCandleTimeRemaining(activeTimeframe);
+    const tfUpper = activeTimeframe.toUpperCase();
+
+    // Dark high-contrast background
+    ctx.fillStyle = "#080c13";
+    ctx.fillRect(chartWidth, timerBoxY, badgeWidth, timerBadgeH);
+
+    // Matching colored border and accent bar
+    ctx.strokeStyle = isUp ? "rgba(16, 185, 129, 0.75)" : "rgba(239, 68, 68, 0.75)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(chartWidth + 0.5, timerBoxY + 0.5, badgeWidth - 1, timerBadgeH - 1);
+
+    // Colored accent strip on the left edge
+    ctx.fillStyle = isUp ? "#10b981" : "#ef4444";
+    ctx.fillRect(chartWidth, timerBoxY, 3, timerBadgeH);
+
+    // Candle countdown text: e.g. "⏱ 15M 04:23"
+    ctx.fillStyle = isUp ? "#34d399" : "#f87171";
+    ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+    ctx.fillText(`⏱ ${tfUpper} ${activeCandleCountdown.formatted}`, chartWidth + 6, timerBoxY + timerBadgeH / 2);
 
     // Draw dashed line across the chart for current price
     ctx.strokeStyle = isUp ? "#10b981" : "#ef4444";
@@ -7640,6 +7679,7 @@ useEffect(() => {
   selectedDrawingId,
   replay.currentPlaybackIndex,
   domState,
+  liveTimes,
 ]);
 
   // --- NATIVE NON-PASSIVE WHEEL & TRACKPAD PINCH-TO-ZOOM HANDLER ---
@@ -8866,6 +8906,9 @@ const yToPrice = (y: number): number => {
       
       {/* Pace Gauge Overlay */}
       <PaceGauge />
+
+      {/* Multi-Timeframe Candle Countdown Widget */}
+      <CandleCountdownWidget />
     </div>
   );
 };
