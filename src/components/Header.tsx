@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTrading } from '../stores/useTradingStore';
 import { ChartType } from '../types/chart';
-import { Search, ChevronDown, Check, X, Star, Trash2, Plus, Zap, Volume2, VolumeX, Edit3, ShieldAlert } from 'lucide-react';
+import { Search, ChevronDown, Check, X, Star, Trash2, Plus, Zap, Volume2, VolumeX, Edit3, ShieldAlert, Layers } from 'lucide-react';
 import { FAEngineModal } from './FAEngineModal';
 import { useLEZStore, setLEZState } from '../stores/useLEZStore';
 import { LEZSignalsModal } from './LEZSignalsModal';
@@ -86,6 +86,9 @@ export const Header: React.FC = () => {
   const {
     activeSymbol,
     setActiveSymbol,
+    openTabs,
+    closeTab,
+    reorderTabs,
     activeTimeframe,
     setActiveTimeframe,
     chartType,
@@ -189,6 +192,10 @@ export const Header: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
+  const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number }>({ top: 76, left: 65 });
 
   // --- FAVORITE COINS SYSTEM ---
   
@@ -370,6 +377,69 @@ export const Header: React.FC = () => {
   useEffect(() => {
     setFocusedIndex(0);
   }, [searchQuery, isSearchOpen]);
+
+  // Smooth wheel horizontal scroll for tabs bar
+  const handleTabsWheel = (e: React.WheelEvent) => {
+    if (tabsContainerRef.current && e.deltaY !== 0) {
+      tabsContainerRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  // Drag & drop reordering for coin tabs
+  const handleTabDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedTabIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleTabDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleTabDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedTabIndex === null || draggedTabIndex === targetIndex) {
+      setDraggedTabIndex(null);
+      return;
+    }
+    const updated = [...openTabs];
+    const [moved] = updated.splice(draggedTabIndex, 1);
+    updated.splice(targetIndex, 0, moved);
+    reorderTabs(updated);
+    setDraggedTabIndex(null);
+  };
+
+  // Auto-scroll active tab into view when activeSymbol changes
+  useEffect(() => {
+    if (tabsContainerRef.current) {
+      const activeEl = tabsContainerRef.current.querySelector('[data-active-tab="true"]') as HTMLElement;
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    }
+  }, [activeSymbol]);
+
+  // Dynamic dropdown positioning right beneath symbol search input
+  useEffect(() => {
+    const updateCoords = () => {
+      if (dropdownRef.current) {
+        const headerEl = dropdownRef.current.closest('.header-root-container');
+        if (headerEl) {
+          const headerRect = headerEl.getBoundingClientRect();
+          const inputRect = dropdownRef.current.getBoundingClientRect();
+          setDropdownCoords({
+            top: inputRect.bottom - headerRect.top + 6,
+            left: Math.max(8, inputRect.left - headerRect.left + 50)
+          });
+        }
+      }
+    };
+    if (isSearchOpen) {
+      updateCoords();
+      window.addEventListener('resize', updateCoords);
+      return () => window.removeEventListener('resize', updateCoords);
+    }
+  }, [isSearchOpen]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -825,11 +895,11 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#07090b] border-b border-slate-900/80 p-2 flex flex-col gap-2 w-full font-sans select-none shrink-0 relative z-40">
+    <div className="header-root-container bg-[#07090b] border-b border-slate-900/80 p-2 flex flex-col gap-2 w-full font-sans select-none shrink-0 relative z-40">
       
       {/* DROPDOWN PORTAL (Extracted from overflow-x-auto container) */}
       {isSearchOpen && (
-            <div ref={listContainerRef} className="absolute top-[38px] left-[65px] w-64 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+            <div ref={listContainerRef} style={{ top: `${dropdownCoords.top}px`, left: `${dropdownCoords.left}px` }} className="absolute w-64 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl z-[100] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
               {/* Tabs: ALL vs FAVORITES */}
               <div className="flex items-center border-b border-slate-800/80 bg-slate-900/90 p-1 text-[10px] font-bold gap-1">
                 <button
@@ -924,6 +994,77 @@ export const Header: React.FC = () => {
           )}
 
       
+      {/* ROW 0: COIN TABS (Polimata penna tabs) */}
+      <div
+        ref={tabsContainerRef}
+        onWheel={handleTabsWheel}
+        className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 border-b border-slate-900/80 whitespace-nowrap w-full select-none"
+      >
+        <div className="flex items-center gap-1.5 shrink-0 text-slate-500 text-[10px] font-bold uppercase tracking-wider pr-1 pl-0.5">
+          <Layers className="w-3.5 h-3.5 text-cyan-500/80" />
+          <span>COIN TABS:</span>
+        </div>
+
+        {openTabs.map((sym, idx) => {
+          const isActive = sym === activeSymbol;
+          return (
+            <div
+              key={sym}
+              data-active-tab={isActive ? "true" : "false"}
+              draggable
+              onDragStart={(e) => handleTabDragStart(e, idx)}
+              onDragOver={handleTabDragOver}
+              onDrop={(e) => handleTabDrop(e, idx)}
+              onClick={() => setActiveSymbol(sym)}
+              className={`group flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-bold transition-all duration-150 cursor-pointer shrink-0 border ${
+                isActive
+                  ? 'bg-cyan-950/45 border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.3)] ring-1 ring-cyan-500/30'
+                  : 'bg-slate-950/75 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:border-slate-700 hover:bg-slate-900/50'
+              }`}
+              title={`Switch chart to ${sym} (Drag to reorder)`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.9)] animate-pulse' : 'bg-slate-600'}`} />
+              <span className="tracking-wider">{sym}</span>
+              
+              {openTabs.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeTab(sym);
+                  }}
+                  className={`p-0.5 rounded transition-all ml-0.5 cursor-pointer ${
+                    isActive 
+                      ? 'text-cyan-400/60 hover:text-rose-400 hover:bg-rose-500/20' 
+                      : 'text-slate-600 hover:text-rose-400 hover:bg-slate-800'
+                  }`}
+                  title={`Close ${sym} tab`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Add Tab (+) Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsSearchOpen(true);
+            setSearchQuery('');
+            if (searchInputRef.current) {
+              searchInputRef.current.focus();
+            }
+          }}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] md:text-[11px] font-bold border border-dashed border-slate-800 text-slate-500 hover:text-cyan-400 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all cursor-pointer shrink-0"
+          title="Search coin to open new tab"
+        >
+          <Plus className="w-3 h-3" />
+          <span>ADD TAB</span>
+        </button>
+      </div>
+
       {/* ROW 1: SELECTORS & INDICATORS group (IMB through FVG) */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 whitespace-nowrap w-full">
         {/* SYMBOL Selector */}
@@ -932,6 +1073,7 @@ export const Header: React.FC = () => {
           
           <div className="relative group">
             <input
+              ref={searchInputRef}
               type="text"
               value={isSearchOpen ? searchQuery : activeSymbol}
               onClick={() => {
@@ -964,6 +1106,7 @@ export const Header: React.FC = () => {
                   } else if (searchQuery.trim().length > 0) {
                      setActiveSymbol(searchQuery.trim().toUpperCase());
                      setIsSearchOpen(false);
+                     setSearchQuery('');
                      e.currentTarget.blur();
                   }
                 } else if (e.key === 'Escape') {

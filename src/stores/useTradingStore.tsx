@@ -31,6 +31,11 @@ interface TradingContextProps {
   // Connection & Active selections
   activeSymbol: string;
   setActiveSymbol: (sym: string) => void;
+  openTabs: string[];
+  setOpenTabs: React.Dispatch<React.SetStateAction<string[]>>;
+  openTab: (sym: string) => void;
+  closeTab: (sym: string) => void;
+  reorderTabs: (newTabs: string[]) => void;
   activeTimeframe: string;
   setActiveTimeframe: (tf: string) => void;
   chartType: ChartType;
@@ -200,6 +205,23 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Load initial settings from LocalStorage
   const [activeSymbol, setActiveSymbolState] = useState<string>(() => localStorage.getItem('symbol') || 'BTCUSDT');
+  const [openTabs, setOpenTabsState] = useState<string[]>(() => {
+    const current = localStorage.getItem('symbol') || 'BTCUSDT';
+    try {
+      const saved = localStorage.getItem('open_symbol_tabs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const clean = parsed.map((s) => String(s).toUpperCase().trim()).filter(Boolean);
+          if (!clean.includes(current)) {
+            return [...clean, current];
+          }
+          return clean;
+        }
+      }
+    } catch {}
+    return [current];
+  });
   const [activeTimeframe, setActiveTimeframeState] = useState<string>(() => localStorage.getItem('timeframe') || '1h');
   const [chartType, setChartTypeState] = useState<ChartType>(() => (localStorage.getItem('chartType') as ChartType) || 'candlestick');
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
@@ -385,8 +407,49 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Safe wrapper setters that also persist to localStorage
   const setActiveSymbol = (sym: string) => {
-    setActiveSymbolState(sym);
-    localStorage.setItem('symbol', sym);
+    const upper = sym.toUpperCase().trim();
+    if (!upper) return;
+    setActiveSymbolState(upper);
+    localStorage.setItem('symbol', upper);
+    setOpenTabsState((prev) => {
+      if (!prev.includes(upper)) {
+        const updated = [...prev, upper];
+        localStorage.setItem('open_symbol_tabs', JSON.stringify(updated));
+        return updated;
+      }
+      return prev;
+    });
+  };
+
+  const openTab = (sym: string) => {
+    setActiveSymbol(sym);
+  };
+
+  const closeTab = (symToClose: string) => {
+    const target = symToClose.toUpperCase().trim();
+    setOpenTabsState((prev) => {
+      if (prev.length <= 1) {
+        return prev;
+      }
+      const idx = prev.indexOf(target);
+      if (idx === -1) return prev;
+
+      const updated = prev.filter((s) => s !== target);
+      localStorage.setItem('open_symbol_tabs', JSON.stringify(updated));
+
+      if (activeSymbol === target) {
+        const nextIdx = Math.min(idx, updated.length - 1);
+        const nextSym = updated[nextIdx];
+        setActiveSymbolState(nextSym);
+        localStorage.setItem('symbol', nextSym);
+      }
+      return updated;
+    });
+  };
+
+  const reorderTabs = (newTabs: string[]) => {
+    setOpenTabsState(newTabs);
+    localStorage.setItem('open_symbol_tabs', JSON.stringify(newTabs));
   };
 
   const setActiveTimeframe = (tf: string) => {
@@ -1150,6 +1213,11 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsAutoAggregation,
         activeSymbol,
         setActiveSymbol,
+        openTabs,
+        setOpenTabs: setOpenTabsState,
+        openTab,
+        closeTab,
+        reorderTabs,
         activeTimeframe,
         setActiveTimeframe,
         chartType,
