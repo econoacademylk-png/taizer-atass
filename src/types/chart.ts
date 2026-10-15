@@ -115,6 +115,7 @@ export interface IndicatorConfig {
   showMMS?: boolean;
   showNews?: boolean;
   showRekt?: boolean;
+  showS1?: boolean;
 }
 
 export interface DOMLevel {

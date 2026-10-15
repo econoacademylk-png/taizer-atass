@@ -15,6 +15,7 @@ import { OBScanBox } from "./OBScanBox";
 import { PaceGauge } from "./PaceGauge";
 import { CandleCountdownWidget } from "./CandleCountdownWidget";
 import { getCandleTimeRemaining } from "../utils/candleCountdown";
+import { calculateTrendTargetRibbon, renderTrendTargetRibbon } from "../utils/trendTargetRibbon";
 import { API_BASE } from '../config/api';
 
 const formatStatValue = (val: number): string => {
@@ -4532,6 +4533,19 @@ export const ChartContainer: React.FC = () => {
     ? activeCandles.reduce((acc, curr) => acc + curr.volume, 0) / activeCandles.length 
     : 1;
 
+  // --- TREND TARGET RIBBON (S1) [BOSWaves] BANDS ---
+  let s1RibbonData: any = null;
+  if (indicators.showS1 && activeCandles.length > 20) {
+    s1RibbonData = calculateTrendTargetRibbon(activeCandles);
+    renderTrendTargetRibbonBands(
+      ctx,
+      s1RibbonData,
+      timeToX,
+      priceToY,
+      chartWidth
+    );
+  }
+
   // --- STANDARD CANDLESTICK / FOOTPRINT DRAWING LOOPS ---
   activeCandles.forEach((c, idx) => {
     const x = timeToX(c.time);
@@ -4543,8 +4557,18 @@ export const ChartContainer: React.FC = () => {
     const yLow = priceToY(c.low);
 
     const isBullish = c.close >= c.open;
-    const themeGreen = "#00C076";
-    const themeRed = "#FF3B30";
+    let themeGreen = "#00C076";
+    let themeRed = "#FF3B30";
+    if (indicators.showS1 && s1RibbonData && s1RibbonData.points[idx]) {
+      const rp = s1RibbonData.points[idx];
+      if (rp.trend === 1) {
+        themeGreen = "#00FF00";
+        themeRed = "#00FF00";
+      } else if (rp.trend === -1) {
+        themeGreen = "#FF0066";
+        themeRed = "#FF0066";
+      }
+    }
 
     const isFootprintMode =
       chartType === "footprint" || !!indicators.showStats || vs.barWidth >= 45;
@@ -5311,6 +5335,22 @@ export const ChartContainer: React.FC = () => {
   }
 
 
+
+  // --- TREND TARGET RIBBON (S1) [BOSWaves] OVERLAYS ---
+  if (indicators.showS1 && s1RibbonData) {
+    renderTrendTargetRibbonOverlays(
+      ctx,
+      activeCandles,
+      s1RibbonData,
+      timeToX,
+      priceToY,
+      chartWidth,
+      chartHeight,
+      vs.barWidth,
+      vs.spacing,
+      vs.scrollOffset
+    );
+  }
 
   // --- DRAW INTERACTIVE DRAWING TOOLS ON CANVAS ---
   drawings.forEach((d) => {

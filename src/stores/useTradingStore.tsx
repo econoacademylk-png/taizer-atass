@@ -183,7 +183,8 @@ const DEFAULT_INDICATORS: IndicatorConfig = {
   showVWBA: false,
   showMMS: false,
   showNews: false,
-  showPace: false
+  showPace: false,
+  showS1: false
 };
 
 const DEFAULT_SMC: SMCConfig = {

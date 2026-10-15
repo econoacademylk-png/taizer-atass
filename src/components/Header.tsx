@@ -49,7 +49,8 @@ const highlightMatch = (text: string, query: string) => {
     { id: 'NEWS', label: 'NEWS', theme: 'blue' },
     { id: 'LIQ-POOL', label: 'LIQ-POOL', theme: 'pink' },
     { id: 'PACE', label: 'PACE', theme: 'orange' },
-    { id: 'FVG', label: 'FVG', theme: 'rose' }
+    { id: 'FVG', label: 'FVG', theme: 'rose' },
+    { id: 'S1', label: 's1', theme: 'pink' }
   ];
 
 
@@ -164,6 +165,7 @@ export const Header: React.FC = () => {
       'FP SHAPE': false,
       'BBA-DELTA': false,
       '24H-BACK': false,
+      'S1': false,
     };
     try {
       const saved = localStorage.getItem('active_toggles');
@@ -580,6 +582,7 @@ export const Header: React.FC = () => {
     if (id === 'VWBA') return !!indicators.showVWBA;
     if (id === 'HV-BUY') return smc.showHVBuy;
     if (id === 'HV-SELL') return smc.showHVSell;
+    if (id === 'S1') return !!indicators.showS1;
     if (id === 'A') return isAutoAggregation;
     return !!activeToggles[id];
   };
@@ -639,7 +642,8 @@ export const Header: React.FC = () => {
         'WYC': 'showWYC',
         'VWBA': 'showVWBA',
         'MMS': 'showMMS',
-        'REKT': 'showRekt'
+        'REKT': 'showRekt',
+        'S1': 'showS1'
       };
       
       const schemaKey = mapping[id];
@@ -775,6 +779,8 @@ export const Header: React.FC = () => {
       setIndicators({ showMMS: nextActive });
     } else if (id === 'REKT') {
       setIndicators({ showRekt: nextActive });
+    } else if (id === 'S1') {
+      setIndicators({ showS1: nextActive });
     }
   };
 
