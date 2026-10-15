@@ -14,8 +14,11 @@ import { calculateLEZ } from "../utils/lezCalculator";
 import { OBScanBox } from "./OBScanBox";
 import { PaceGauge } from "./PaceGauge";
 import { CandleCountdownWidget } from "./CandleCountdownWidget";
-import { getCandleTimeRemaining } from "../utils/candleCountdown";
-import { calculateTrendTargetRibbon, renderTrendTargetRibbon } from "../utils/trendTargetRibbon";
+import {
+  calculateTrendTargetRibbon,
+  renderTrendTargetRibbonBands,
+  renderTrendTargetRibbonOverlays,
+} from "../utils/trendTargetRibbon";
 import { API_BASE } from '../config/api';
 
 const formatStatValue = (val: number): string => {
@@ -4536,14 +4539,20 @@ export const ChartContainer: React.FC = () => {
   // --- TREND TARGET RIBBON (S1) [BOSWaves] BANDS ---
   let s1RibbonData: any = null;
   if (indicators.showS1 && activeCandles.length > 20) {
-    s1RibbonData = calculateTrendTargetRibbon(activeCandles);
-    renderTrendTargetRibbonBands(
-      ctx,
-      s1RibbonData,
-      timeToX,
-      priceToY,
-      chartWidth
-    );
+    try {
+      s1RibbonData = calculateTrendTargetRibbon(activeCandles);
+      if (s1RibbonData) {
+        renderTrendTargetRibbonBands(
+          ctx,
+          s1RibbonData,
+          timeToX,
+          priceToY,
+          chartWidth
+        );
+      }
+    } catch (err) {
+      console.error("Error calculating or rendering S1 ribbon bands:", err);
+    }
   }
 
   // --- STANDARD CANDLESTICK / FOOTPRINT DRAWING LOOPS ---
@@ -4559,13 +4568,13 @@ export const ChartContainer: React.FC = () => {
     const isBullish = c.close >= c.open;
     let themeGreen = "#00C076";
     let themeRed = "#FF3B30";
-    if (indicators.showS1 && s1RibbonData && s1RibbonData.points[idx]) {
+    if (indicators.showS1 && s1RibbonData?.points?.[idx]) {
       const rp = s1RibbonData.points[idx];
       if (rp.trend === 1) {
         themeGreen = "#00FF00";
-        themeRed = "#00FF00";
+        themeRed = "#00B84D";
       } else if (rp.trend === -1) {
-        themeGreen = "#FF0066";
+        themeGreen = "#FF4081";
         themeRed = "#FF0066";
       }
     }
@@ -4960,12 +4969,12 @@ export const ChartContainer: React.FC = () => {
         ctx.fill();
 
         // Draw border (green for positive or zero, red for negative)
-        ctx.strokeStyle = deltaVal >= 0 ? themeGreen : themeRed;
+        ctx.strokeStyle = deltaVal >= 0 ? "#00C076" : "#FF3B30";
         ctx.lineWidth = 1.0;
         ctx.stroke();
 
         // Draw text
-        ctx.fillStyle = deltaVal >= 0 ? themeGreen : themeRed;
+        ctx.fillStyle = deltaVal >= 0 ? "#00C076" : "#FF3B30";
         ctx.textAlign = "center";
         ctx.fillText(deltaText, x, labelY + 3.5);
       }
@@ -5338,18 +5347,22 @@ export const ChartContainer: React.FC = () => {
 
   // --- TREND TARGET RIBBON (S1) [BOSWaves] OVERLAYS ---
   if (indicators.showS1 && s1RibbonData) {
-    renderTrendTargetRibbonOverlays(
-      ctx,
-      activeCandles,
-      s1RibbonData,
-      timeToX,
-      priceToY,
-      chartWidth,
-      chartHeight,
-      vs.barWidth,
-      vs.spacing,
-      vs.scrollOffset
-    );
+    try {
+      renderTrendTargetRibbonOverlays(
+        ctx,
+        activeCandles,
+        s1RibbonData,
+        timeToX,
+        priceToY,
+        chartWidth,
+        chartHeight,
+        vs.barWidth,
+        vs.spacing,
+        vs.scrollOffset
+      );
+    } catch (err) {
+      console.error("Error rendering Trend Target Ribbon overlays (S1):", err);
+    }
   }
 
   // --- DRAW INTERACTIVE DRAWING TOOLS ON CANVAS ---

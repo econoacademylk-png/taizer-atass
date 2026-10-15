@@ -91,7 +91,7 @@ export function calculateTrendTargetRibbon(
     sellCol = '#FF0066',
   } = config;
 
-  const n = candles.length;
+  const n = candles ? candles.length : 0;
   if (n < Math.max(almaLen, devLen, atrLen) + 5) {
     return { points: [], positions: [], currentTrend: 0 };
   }
@@ -107,11 +107,15 @@ export function calculateTrendTargetRibbon(
     weights[i] = w;
     norm += w;
   }
+  if (norm === 0) norm = 1;
 
   for (let t = almaLen - 1; t < n; t++) {
     let sum = 0;
     for (let i = 0; i < almaLen; i++) {
-      sum += candles[t - (almaLen - 1 - i)].close * weights[i];
+      const c = candles[t - (almaLen - 1 - i)];
+      if (c && typeof c.close === 'number' && !isNaN(c.close)) {
+        sum += c.close * weights[i];
+      }
     }
     alma[t] = sum / norm;
   }
@@ -120,16 +124,28 @@ export function calculateTrendTargetRibbon(
   const dev = new Array(n).fill(0);
   for (let t = devLen - 1; t < n; t++) {
     let sum = 0;
+    let count = 0;
     for (let i = 0; i < devLen; i++) {
-      sum += candles[t - i].close;
+      const c = candles[t - i];
+      if (c && typeof c.close === 'number' && !isNaN(c.close)) {
+        sum += c.close;
+        count++;
+      }
     }
-    const mean = sum / devLen;
+    if (count === 0) {
+      dev[t] = 0;
+      continue;
+    }
+    const mean = sum / count;
     let varianceSum = 0;
     for (let i = 0; i < devLen; i++) {
-      const diff = candles[t - i].close - mean;
-      varianceSum += diff * diff;
+      const c = candles[t - i];
+      if (c && typeof c.close === 'number' && !isNaN(c.close)) {
+        const diff = c.close - mean;
+        varianceSum += diff * diff;
+      }
     }
-    dev[t] = Math.sqrt(varianceSum / devLen);
+    dev[t] = Math.sqrt(varianceSum / count);
   }
 
   // 3. Calculate ATR (length: atrLen)
@@ -138,6 +154,7 @@ export function calculateTrendTargetRibbon(
   for (let i = 1; i < n; i++) {
     const c = candles[i];
     const prevC = candles[i - 1];
+    if (!c || !prevC) continue;
     const tr = Math.max(
       c.high - c.low,
       Math.abs(c.high - prevC.close),
@@ -257,13 +274,17 @@ export function calculateTrendTargetRibbon(
       if (positionDir === 1) {
         let lowest = Infinity;
         for (let k = lookbackStart; k < i; k++) {
-          if (candles[k].low < lowest) lowest = candles[k].low;
+          if (candles[k] && typeof candles[k].low === 'number' && candles[k].low < lowest) {
+            lowest = candles[k].low;
+          }
         }
         structureStop = isFinite(lowest) ? lowest : entryPrice - r;
       } else {
         let highest = -Infinity;
         for (let k = lookbackStart; k < i; k++) {
-          if (candles[k].high > highest) highest = candles[k].high;
+          if (candles[k] && typeof candles[k].high === 'number' && candles[k].high > highest) {
+            highest = candles[k].high;
+          }
         }
         structureStop = isFinite(highest) ? highest : entryPrice + r;
       }
@@ -356,6 +377,7 @@ export function drawFlagBadge(
   bgColor: string,
   textColor: string = '#FFFFFF'
 ) {
+  if (!isFinite(x) || !isFinite(y)) return;
   ctx.save();
   ctx.font = 'bold 10.5px "JetBrains Mono", monospace';
   const metrics = ctx.measureText(text);
@@ -401,12 +423,13 @@ export function renderTrendTargetRibbonBands(
     const p1 = points[i];
     const p2 = points[i + 1];
 
-    if (isNaN(p1.alma) || isNaN(p2.alma) || p1.trend === 0 || p2.trend === 0) continue;
+    if (!p1 || !p2 || isNaN(p1.alma) || isNaN(p2.alma) || p1.trend === 0 || p2.trend === 0) continue;
     if (p2.bullFlip || p2.bearFlip) continue; // Trend flip break
 
     const x1 = timeToX(p1.time);
     const x2 = timeToX(p2.time);
 
+    if (!isFinite(x1) || !isFinite(x2)) continue;
     // Skip if completely out of view
     if (Math.max(x1, x2) < -30 || Math.min(x1, x2) > chartWidth + 30) continue;
 
@@ -416,6 +439,16 @@ export function renderTrendTargetRibbonBands(
     const yMid2 = priceToY(p2.ribbonMid);
     const yEdge1 = priceToY(p1.ribbonEdge);
     const yEdge2 = priceToY(p2.ribbonEdge);
+
+    if (
+      !isFinite(yAlma1) ||
+      !isFinite(yAlma2) ||
+      !isFinite(yMid1) ||
+      !isFinite(yMid2) ||
+      !isFinite(yEdge1) ||
+      !isFinite(yEdge2)
+    )
+      continue;
 
     const isBull = p1.trend === 1;
     const baseColor = isBull ? '0, 255, 0' : '255, 0, 102';
@@ -491,13 +524,14 @@ export function renderTrendTargetRibbonOverlays(
   for (let i = 0; i < points.length; i++) {
     const p = points[i];
     const c = candles[i];
-    if (!p.bullFlip && !p.bearFlip) continue;
+    if (!p || !c || (!p.bullFlip && !p.bearFlip)) continue;
 
     const x = timeToX(p.time);
-    if (x < -20 || x > chartWidth + 20) continue;
+    if (!isFinite(x) || x < -20 || x > chartWidth + 20) continue;
 
     if (p.bullFlip) {
       const y = priceToY(c.low) + 14;
+      if (!isFinite(y)) continue;
       ctx.fillStyle = '#00FF00';
       ctx.shadowColor = 'rgba(0, 255, 0, 0.7)';
       ctx.shadowBlur = 6;
@@ -512,6 +546,7 @@ export function renderTrendTargetRibbonOverlays(
       ctx.shadowBlur = 0;
     } else if (p.bearFlip) {
       const y = priceToY(c.high) - 14;
+      if (!isFinite(y)) continue;
       ctx.fillStyle = '#FF0066';
       ctx.shadowColor = 'rgba(255, 0, 102, 0.7)';
       ctx.shadowBlur = 6;
@@ -535,16 +570,18 @@ export function renderTrendTargetRibbonOverlays(
     let endX: number;
     if (pos.positionEnded && pos.endTime) {
       endX = timeToX(pos.endTime);
-      if (endX <= startX) endX = startX + 30 * (barWidth + spacing);
+      if (!isFinite(endX) || endX <= startX) endX = startX + 30 * (barWidth + spacing);
     } else {
       endX = latestBarX + 30 * (barWidth + spacing);
     }
 
+    if (!isFinite(startX) || !isFinite(endX)) return;
     // Keep within chart visible bounds + small buffer
     if (endX < 0 || startX > chartWidth) return;
 
     const yEntry = priceToY(pos.entryPrice);
     const yStop = priceToY(pos.stopPrice);
+    if (!isFinite(yEntry) || !isFinite(yStop)) return;
 
     const isLong = pos.direction === 1;
     const posCol = isLong ? '#00FF00' : '#FF0066';
@@ -605,6 +642,7 @@ export function renderTrendTargetRibbonOverlays(
 
     pos.targets.forEach((target) => {
       const yTarget = priceToY(target.price);
+      if (!isFinite(yTarget)) return;
 
       // Shaded band between previous level and target
       const topBand = Math.min(prevLevelY, yTarget);
